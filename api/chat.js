@@ -1,4 +1,3 @@
-// api/chat.js
 export default async function handler(req, res) {
     // Allow requests from any origin (CORS)
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,7 +16,6 @@ export default async function handler(req, res) {
     }
 
     try {
-        // Your secret API key – stored as an environment variable, NEVER in code
         const apiKey = process.env.OLLAMA_API_KEY;
         if (!apiKey) {
             throw new Error('API key not configured on the server');
