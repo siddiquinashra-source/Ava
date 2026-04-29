@@ -137,10 +137,9 @@
         </div>
     </div>
 
-       <script>
+    <script>
         // ----- CURRENT MODEL -----
         let MODEL_NAME = 'gemini-3-flash-preview';
-        const FALLBACK_MODEL = 'gemini-3-flash-preview';
 
         const API_URL = '/api/chat';
         let conversationHistory = [];
@@ -188,26 +187,6 @@
             if (indicator) indicator.remove();
         }
 
-        // Try a model, fall back to Gemini if it fails
-        async function tryModel(modelName, messages) {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: modelName,
-                    messages: messages,
-                    stream: false
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const data = await response.json();
-            return data.message?.content || data.response;
-        }
-
         async function sendMessage() {
             const message = userInput.value.trim();
             if (!message || isProcessing) return;
@@ -222,42 +201,32 @@
             showTypingIndicator();
 
             try {
-                let botReply;
-                const selectedModel = MODEL_NAME;
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: MODEL_NAME,
+                        messages: conversationHistory,
+                        stream: false
+                    })
+                });
 
-                try {
-                    // Try the selected model first
-                    botReply = await tryModel(selectedModel, conversationHistory);
-                } catch (firstError) {
-                    console.warn(`${selectedModel} failed, falling back to Gemini...`);
-                    
-                    // If the selected model is already Gemini, just show the error
-                    if (selectedModel === FALLBACK_MODEL) {
-                        throw firstError;
-                    }
-
-                    // Try Gemini as fallback
-                    try {
-                        botReply = await tryModel(FALLBACK_MODEL, conversationHistory);
-                        // Add a note that we fell back
-                        botReply = `⚠️ ${selectedModel} is currently busy. Here's a response from Gemini instead:\n\n${botReply}`;
-                    } catch (fallbackError) {
-                        throw new Error('All models are currently busy. Please try again later.');
-                    }
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errText}`);
                 }
 
+                const data = await response.json();
                 removeTypingIndicator();
+
+                const botReply = data.message?.content || data.response || "I'm not sure how to respond to that.";
                 addMessage(botReply, 'bot');
                 conversationHistory.push({ role: 'assistant', content: botReply });
 
                 if (conversationHistory.length > 30) conversationHistory = conversationHistory.slice(-30);
             } catch (error) {
                 removeTypingIndicator();
-                if (error.message.includes('All models')) {
-                    addMessage(`😔 ${error.message}`, 'error');
-                } else {
-                    addMessage(`❌ Error: ${error.message}`, 'error');
-                }
+                addMessage(`❌ Error: ${error.message}`, 'error');
             } finally {
                 isProcessing = false;
                 sendButton.disabled = false;
