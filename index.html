@@ -76,7 +76,12 @@
         const MODEL_NAME = 'gemini-3-flash-preview';
 
         const API_URL = '/api/chat';
-        let conversationHistory = [];
+       let conversationHistory = [
+    {
+        role: 'system',
+        content: 'Your name is Ava. You are a friendly, helpful AI assistant created by Nashra. You are powered by Ollama Cloud. Never say you are Gemini or trained by Google. Always introduce yourself as Ava.'
+    }
+];
         let isProcessing = false;
 
         const chatMessages = document.getElementById('chatMessages');
