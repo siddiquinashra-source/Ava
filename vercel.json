@@ -8,11 +8,5 @@
       "memory": 256,
       "maxDuration": 30
     }
-  },
-  "rewrites": [
-    { "source": "/api/auth/login", "destination": "/api/auth" },
-    { "source": "/api/auth/signup", "destination": "/api/auth" },
-    { "source": "/api/auth/verify", "destination": "/api/auth" },
-    { "source": "/api/auth/logout", "destination": "/api/auth" }
-  ]
+  }
 }
