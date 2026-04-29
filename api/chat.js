@@ -137,6 +137,24 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: error.message });
         }
     }
+    // ----- DELETE CONVERSATION -----
+    if (req.method === 'POST' && action === 'delete') {
+        const { conversationId } = req.body || {};
+        const userId = req.headers['x-user-id'];
 
+        if (!conversationId || !userId) {
+            return res.status(400).json({ error: 'Missing conversationId or userId' });
+        }
+
+        try {
+            // Delete messages first (CASCADE should handle this, but being safe)
+            await sql`DELETE FROM messages WHERE conversation_id = ${conversationId}`;
+            await sql`DELETE FROM conversations WHERE id = ${conversationId} AND user_id = ${userId}`;
+            
+            return res.status(200).json({ success: true });
+        } catch (error) {
+            return res.status(500).json({ error: error.message });
+        }
+    }
     return res.status(405).json({ error: 'Method not allowed' });
 }
