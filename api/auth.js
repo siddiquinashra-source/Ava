@@ -1,6 +1,18 @@
-// api/auth.js - Handles all auth operations via Neon Auth
+import { neon } from '@neondatabase/serverless';
+import crypto from 'crypto';
+
+const sql = neon('postgresql://neondb_owner:npg_RKe0bD6jwSrh@ep-quiet-cherry-a45jj9ee.us-east-1.aws.neon.tech/neondb?sslmode=require');
+
+function hashPassword(password) {
+    return crypto.createHash('sha256').update(password + 'ava-secret-salt').digest('hex');
+}
+
+function generateToken(userId) {
+    const payload = JSON.stringify({ userId, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 });
+    return Buffer.from(payload).toString('base64');
+}
+
 export default async function handler(req, res) {
-    // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -10,144 +22,87 @@ export default async function handler(req, res) {
         return;
     }
 
-    const AUTH_URL = 'https://ep-quiet-cherry-a45jj9ee.neonauth.us-east-1.aws.neon.tech/neondb/auth';
-    
-    // Parse the action from the URL
     const url = new URL(req.url, `http://${req.headers.host}`);
     const action = url.pathname.split('/').pop();
 
-    // ----- SIGNUP -----
+    // SIGNUP
     if (req.method === 'POST' && action === 'signup') {
         const { email, password, name } = req.body || {};
-
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password required' });
         }
-
         try {
-            const response = await fetch(`${AUTH_URL}/signup`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email,
-                    password,
-                    data: { name: name || email.split('@')[0] }
-                })
-            });
-
-            const text = await response.text();
-            console.log('Signup response:', text);
-
-            let data;
-            try {
-                data = JSON.parse(text);
-            } catch (e) {
-                return res.status(500).json({ 
-                    error: 'Invalid response from auth server',
-                    details: text.substring(0, 200)
-                });
+            const existing = await sql`SELECT id FROM users WHERE email = ${email}`;
+            if (existing.length > 0) {
+                return res.status(400).json({ error: 'Email already registered' });
             }
-
-            if (!response.ok) {
-                return res.status(response.status).json({ 
-                    error: data.message || data.error || 'Signup failed' 
-                });
-            }
-
-            // Return user data
+            const hashedPassword = hashPassword(password);
+            const userId = 'usr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            await sql`
+                INSERT INTO users (id, email, password, name, created_at)
+                VALUES (${userId}, ${email}, ${hashedPassword}, ${name || email.split('@')[0]}, NOW())
+            `;
+            const token = generateToken(userId);
             return res.status(200).json({
-                user: data.user || { 
-                    id: data.id || 'user_' + Date.now(), 
-                    email, 
-                    name: name || email.split('@')[0] 
-                },
-                session: data.session || { access_token: data.access_token }
+                user: { id: userId, email, name: name || email.split('@')[0] },
+                session: { access_token: token }
             });
         } catch (error) {
             return res.status(500).json({ error: error.message });
         }
     }
 
-    // ----- LOGIN -----
+    // LOGIN
     if (req.method === 'POST' && action === 'login') {
         const { email, password } = req.body || {};
-
         if (!email || !password) {
             return res.status(400).json({ error: 'Email and password required' });
         }
-
         try {
-            const response = await fetch(`${AUTH_URL}/token?grant_type=password`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-
-            const text = await response.text();
-            console.log('Login response:', text);
-
-            let data;
-            try {
-                data = JSON.parse(text);
-            } catch (e) {
-                return res.status(500).json({ 
-                    error: 'Invalid response from auth server',
-                    details: text.substring(0, 200)
-                });
+            const hashedPassword = hashPassword(password);
+            const users = await sql`
+                SELECT id, email, name FROM users 
+                WHERE email = ${email} AND password = ${hashedPassword}
+            `;
+            if (users.length === 0) {
+                return res.status(401).json({ error: 'Invalid email or password' });
             }
-
-            if (!response.ok) {
-                return res.status(response.status).json({ 
-                    error: data.message || data.error || 'Login failed' 
-                });
-            }
-
+            const user = users[0];
+            const token = generateToken(user.id);
             return res.status(200).json({
-                session: data,
-                user: data.user || { id: data.user_id, email }
+                user: { id: user.id, email: user.email, name: user.name },
+                session: { access_token: token }
             });
         } catch (error) {
             return res.status(500).json({ error: error.message });
         }
     }
 
-    // ----- VERIFY TOKEN -----
+    // VERIFY
     if (req.method === 'POST' && action === 'verify') {
         const { access_token } = req.body || {};
-
         if (!access_token) {
             return res.status(400).json({ error: 'Token required' });
         }
-
         try {
-            const response = await fetch(`${AUTH_URL}/user`, {
-                headers: { 'Authorization': `Bearer ${access_token}` }
-            });
-
-            const text = await response.text();
-            console.log('Verify response:', text);
-
-            let data;
-            try {
-                data = JSON.parse(text);
-            } catch (e) {
-                return res.status(401).json({ error: 'Invalid token' });
+            const payload = JSON.parse(Buffer.from(access_token, 'base64').toString());
+            if (payload.exp < Date.now()) {
+                return res.status(401).json({ error: 'Token expired' });
             }
-
-            if (!response.ok) {
-                return res.status(401).json({ error: 'Invalid token' });
+            const users = await sql`SELECT id, email, name FROM users WHERE id = ${payload.userId}`;
+            if (users.length === 0) {
+                return res.status(401).json({ error: 'User not found' });
             }
-
-            return res.status(200).json({ user: data });
+            return res.status(200).json({ user: users[0] });
         } catch (error) {
-            return res.status(401).json({ error: 'Token verification failed' });
+            return res.status(401).json({ error: 'Invalid token' });
         }
     }
 
-    // ----- LOGOUT -----
+    // LOGOUT
     if (req.method === 'POST' && action === 'logout') {
         return res.status(200).json({ success: true });
     }
 
-    return res.status(404).json({ error: 'Not found', action });
+    return res.status(404).json({ error: 'Not found' });
 }
