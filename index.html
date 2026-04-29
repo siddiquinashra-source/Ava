@@ -41,6 +41,27 @@
             font-size: 13px;
             opacity: 0.9;
         }
+        .model-selector {
+            margin-top: 12px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .model-selector select {
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            outline: none;
+            backdrop-filter: blur(10px);
+        }
+        .model-selector select option {
+            background: #1a1a3e;
+            color: white;
+        }
         .chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -163,6 +184,12 @@
         <div class="chat-header">
             <h1>✨ Ava – Your AI Assistant</h1>
             <p>Ava • Powered by Ollama Cloud</p>
+            <div class="model-selector">
+                <select id="modelSelect" onchange="MODEL_NAME = this.value">
+                    <option value="siddiquinashra/llama3.2:latest" selected>🦙 Llama 3.2</option>
+                    <option value="siddiquinashra/deepseek-coder-v2:latest">🧠 DeepSeek Coder V2</option>
+                </select>
+            </div>
         </div>
 
         <div class="chat-messages" id="chatMessages">
@@ -185,11 +212,12 @@
     </div>
 
     <script>
-        // The model we're using – you can change this later
-        const MODEL_NAME = 'siddiquinashra/llama3.2';
+        // ----- MODEL SELECTION -----
+        // Start with Llama 3.2 (matches the selected option in the dropdown)
+        let MODEL_NAME = 'siddiquinashra/llama3.2:latest';
 
-        // Calls our own proxy (no CORS issues)
-        const API_URL = '/api/chat';
+        // ----- CONFIGURATION -----
+        const API_URL = '/api/chat';   // Our secure proxy endpoint
         let conversationHistory = [];
         let isProcessing = false;
 
@@ -241,7 +269,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        model: MODEL_NAME,    // fixed model
+                        model: MODEL_NAME,      // uses the current model (can be changed by dropdown)
                         messages: conversationHistory,
                         stream: false
                     })
