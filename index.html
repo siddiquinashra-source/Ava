@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ava – AI Assistant</title>
+    
+    <!-- Highlight.js for code syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -285,6 +290,53 @@
         .chat-input button:disabled { opacity: 0.6; cursor: not-allowed; }
         .message-time { font-size: 11px; margin-top: 5px; opacity: 0.7; }
         .user-message .message-time { text-align: right; }
+
+        /* Code Block Styles */
+        .message pre {
+            background: #1a1a2e;
+            border-radius: 10px;
+            padding: 0;
+            margin: 10px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+        .message pre code {
+            font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            padding: 15px;
+            display: block;
+        }
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f0f23;
+            padding: 8px 15px;
+            border-radius: 10px 10px 0 0;
+            font-size: 12px;
+            color: #999;
+        }
+        .copy-btn {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: background 0.2s;
+        }
+        .copy-btn:hover { background: rgba(255,255,255,0.2); }
+        
+        .message code:not(pre code) {
+            background: rgba(0,0,0,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9em;
+        }
+
         .chat-messages::-webkit-scrollbar { width: 6px; }
         .chat-messages::-webkit-scrollbar-track { background: #f1f1f1; }
         .chat-messages::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
@@ -299,7 +351,6 @@
     <!-- Auth Screen -->
     <div id="authScreen" class="auth-container">
         <div class="auth-box" id="authBox">
-            <!-- Login Form -->
             <div id="loginForm">
                 <h2>✨ Welcome Back</h2>
                 <p>Sign in to continue chatting with Ava</p>
@@ -313,7 +364,6 @@
                 </p>
             </div>
             
-            <!-- Signup Form (hidden by default) -->
             <div id="signupForm" style="display:none;">
                 <h2>✨ Create Account</h2>
                 <p>Join Ava and save your chats</p>
@@ -395,6 +445,12 @@
         let currentConversationId = null;
         let conversationHistory = [];
         let isProcessing = false;
+
+        // ----- GET USER DISPLAY NAME -----
+        function getUserName() {
+            if (!currentUser) return 'there';
+            return currentUser.name || currentUser.email?.split('@')[0] || 'there';
+        }
 
         // ----- AUTH UI HELPERS -----
         function showLogin() {
@@ -565,10 +621,20 @@
             document.getElementById('authScreen').style.display = 'none';
             document.getElementById('appScreen').style.display = 'flex';
 
-            const name = currentUser.name || currentUser.email?.split('@')[0] || 'User';
+            const name = getUserName();
             document.getElementById('userName').textContent = name;
             document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
 
+            // Personalized welcome
+            document.getElementById('chatMessages').innerHTML = `
+                <div class="message bot-message">
+                    Welcome back, ${escapeHtml(name)}! How can I help you today? ✨
+                    <div class="message-time">${getFormattedTime()}</div>
+                </div>
+            `;
+            
+            conversationHistory = [];
+            currentConversationId = null;
             loadConversations();
         }
 
@@ -638,9 +704,10 @@
         function newChat() {
             currentConversationId = null;
             conversationHistory = [];
+            const name = getUserName();
             document.getElementById('chatMessages').innerHTML = `
                 <div class="message bot-message">
-                    New chat started! ✨
+                    New chat started, ${escapeHtml(name)}! What can I help with? ✨
                     <div class="message-time">${getFormattedTime()}</div>
                 </div>
             `;
@@ -652,19 +719,65 @@
             return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
 
-        function addMessage(content, type, time = new Date()) {
-            const div = document.createElement('div');
-            div.className = `message ${type}-message`;
-            div.innerHTML = escapeHtml(content).replace(/\n/g, '<br>') +
-                `<div class="message-time">${time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
-            document.getElementById('chatMessages').appendChild(div);
-            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
-        }
-
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function addCopyButtons() {
+            document.querySelectorAll('.message pre').forEach(pre => {
+                if (pre.querySelector('.code-header')) return;
+                
+                const header = document.createElement('div');
+                header.className = 'code-header';
+                
+                const lang = pre.querySelector('code')?.className?.replace('language-', '') || 'code';
+                header.innerHTML = `<span>${lang}</span>`;
+                
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-btn';
+                copyBtn.textContent = '📋 Copy';
+                copyBtn.onclick = function() {
+                    const code = pre.querySelector('code').textContent;
+                    navigator.clipboard.writeText(code).then(() => {
+                        copyBtn.textContent = '✅ Copied!';
+                        setTimeout(() => copyBtn.textContent = '📋 Copy', 2000);
+                    });
+                };
+                
+                header.appendChild(copyBtn);
+                pre.insertBefore(header, pre.firstChild);
+            });
+        }
+
+        function addMessage(content, type, time = new Date()) {
+            const div = document.createElement('div');
+            div.className = `message ${type}-message`;
+            
+            // Process code blocks
+            let processed = content
+                .replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+                    const language = lang || 'plaintext';
+                    return `<pre><code class="language-${language}">${escapeHtml(code.trim())}</code></pre>`;
+                })
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/\n/g, '<br>');
+            
+            div.innerHTML = processed + 
+                `<div class="message-time">${time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
+            
+            document.getElementById('chatMessages').appendChild(div);
+            
+            // Highlight code
+            div.querySelectorAll('pre code').forEach(block => {
+                hljs.highlightElement(block);
+            });
+            
+            // Add copy buttons
+            addCopyButtons();
+            
+            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
         }
 
         function showTyping() {
@@ -690,7 +803,23 @@
             document.getElementById('sendButton').disabled = true;
 
             addMessage(message, 'user');
-            conversationHistory.push({ role: 'user', content: message });
+            
+            // Add user context to conversation
+            const userName = getUserName();
+            const contextMessage = {
+                role: 'user',
+                content: message
+            };
+            
+            // Add system context about the user
+            if (conversationHistory.length === 0 && currentUser) {
+                conversationHistory.push({
+                    role: 'system',
+                    content: `The user's name is ${userName}. Refer to them by name when appropriate to be personal and friendly.`
+                });
+            }
+            
+            conversationHistory.push(contextMessage);
             showTyping();
 
             try {
