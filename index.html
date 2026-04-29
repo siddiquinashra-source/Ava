@@ -665,7 +665,7 @@
         }
 
         // ----- CHAT HISTORY -----
-        async function loadConversations() {
+               async function loadConversations() {
             if (!currentUser) return;
             try {
                 const response = await fetch(API_URL, {
@@ -681,9 +681,9 @@
 
                 if (data.conversations && data.conversations.length > 0) {
                     list.innerHTML = data.conversations.map(conv => `
-                        <div class="conversation-item ${conv.id === currentConversationId ? 'active' : ''}"
-                             onclick="loadConversation('${conv.id}')">
-                            ${escapeHtml(conv.title || 'Untitled')}
+                        <div class="conversation-item ${conv.id === currentConversationId ? 'active' : ''}">
+                            <span class="conversation-title" onclick="loadConversation('${conv.id}')">${escapeHtml(conv.title || 'Untitled')}</span>
+                            <button class="delete-chat-btn" onclick="deleteConversation(event, '${conv.id}')" title="Delete chat">🗑️</button>
                         </div>
                     `).join('');
                 } else {
