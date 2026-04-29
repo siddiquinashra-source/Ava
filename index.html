@@ -4,13 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ava – AI Assistant</title>
-    <script
-        async
-        crossorigin="anonymous"
-        data-clerk-publishable-key="pk_test_c3F1YXJlLXdoYWxlLTQ2LmNsZXJrLmFjY291bnRzLmRldiQ"
-        src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
-        type="text/javascript"
-    ></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -20,6 +13,7 @@
             overflow: hidden;
         }
 
+        /* Auth Screen */
         .auth-container {
             height: 100vh;
             display: flex;
@@ -31,21 +25,64 @@
             padding: 40px;
             border-radius: 20px;
             text-align: center;
-            max-width: 450px;
+            max-width: 400px;
             width: 90%;
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
         .auth-box h2 { margin-bottom: 5px; font-size: 28px; }
-        .auth-box p { margin-bottom: 25px; color: #666; }
-        #clerk-sign-in {
-            min-height: 250px;
+        .auth-box p { margin-bottom: 20px; color: #666; font-size: 14px; }
+        
+        .auth-input {
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        .auth-input:focus { border-color: #667eea; }
+        
+        .auth-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: opacity 0.3s;
+        }
+        .auth-btn:hover { opacity: 0.9; }
+        .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        .auth-link {
+            color: #667eea;
+            cursor: pointer;
+            font-size: 14px;
+            background: none;
+            border: none;
+            text-decoration: underline;
+        }
+        .auth-link:hover { color: #764ba2; }
+        
+        .auth-error {
+            color: #e53e3e;
+            font-size: 13px;
+            margin-bottom: 10px;
+            display: none;
+            padding: 8px;
+            background: #fee;
+            border-radius: 8px;
         }
 
-        .app-layout {
-            display: flex;
-            height: 100vh;
-        }
-
+        /* App Layout */
+        .app-layout { display: flex; height: 100vh; }
+        
         .sidebar {
             width: 280px;
             background: #0f0f23;
@@ -84,6 +121,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            transition: background 0.2s;
         }
         .conversation-item:hover { background: rgba(255,255,255,0.1); }
         .conversation-item.active { background: rgba(102, 126, 234, 0.3); }
@@ -103,7 +141,11 @@
             height: 32px;
             border-radius: 50%;
             background: #667eea;
-            background-size: cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
         }
         .sign-out-btn {
             width: 100%;
@@ -115,7 +157,9 @@
             cursor: pointer;
             font-size: 13px;
         }
+        .sign-out-btn:hover { background: rgba(255,255,255,0.2); }
 
+        /* Chat Area */
         .chat-container {
             flex: 1;
             display: flex;
@@ -219,6 +263,7 @@
             border-radius: 25px;
             font-size: 16px;
             outline: none;
+            transition: border-color 0.3s;
         }
         .chat-input input:focus { border-color: #667eea; }
         .chat-input button {
@@ -230,6 +275,11 @@
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
+            transition: all 0.3s;
+        }
+        .chat-input button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
         .chat-input button:disabled { opacity: 0.6; cursor: not-allowed; }
         .message-time { font-size: 11px; margin-top: 5px; opacity: 0.7; }
@@ -245,14 +295,41 @@
     </style>
 </head>
 <body>
+    <!-- Auth Screen -->
     <div id="authScreen" class="auth-container">
-        <div class="auth-box">
-            <h2>✨ Ava</h2>
-            <p>Sign in to start chatting</p>
-            <div id="clerk-sign-in"></div>
+        <div class="auth-box" id="authBox">
+            <!-- Login Form -->
+            <div id="loginForm">
+                <h2>✨ Welcome Back</h2>
+                <p>Sign in to continue chatting with Ava</p>
+                <div class="auth-error" id="loginError"></div>
+                <input type="email" class="auth-input" id="loginEmail" placeholder="Email address" autocomplete="email">
+                <input type="password" class="auth-input" id="loginPassword" placeholder="Password" autocomplete="current-password">
+                <button class="auth-btn" id="loginBtn" onclick="handleLogin()">Sign In</button>
+                <p style="font-size:14px; color:#666;">
+                    Don't have an account? 
+                    <button class="auth-link" onclick="showSignup()">Sign up</button>
+                </p>
+            </div>
+            
+            <!-- Signup Form (hidden by default) -->
+            <div id="signupForm" style="display:none;">
+                <h2>✨ Create Account</h2>
+                <p>Join Ava and save your chats</p>
+                <div class="auth-error" id="signupError"></div>
+                <input type="text" class="auth-input" id="signupName" placeholder="Your name">
+                <input type="email" class="auth-input" id="signupEmail" placeholder="Email address" autocomplete="email">
+                <input type="password" class="auth-input" id="signupPassword" placeholder="Password (min 8 characters)" autocomplete="new-password">
+                <button class="auth-btn" id="signupBtn" onclick="handleSignup()">Create Account</button>
+                <p style="font-size:14px; color:#666;">
+                    Already have an account? 
+                    <button class="auth-link" onclick="showLogin()">Sign in</button>
+                </p>
+            </div>
         </div>
     </div>
 
+    <!-- App Screen -->
     <div id="appScreen" class="app-layout" style="display:none;">
         <div class="sidebar">
             <div class="sidebar-header">
@@ -267,7 +344,7 @@
                     <div class="user-avatar" id="userAvatar"></div>
                     <span id="userName"></span>
                 </div>
-                <button class="sign-out-btn" onclick="signOut()">Sign Out</button>
+                <button class="sign-out-btn" onclick="handleSignOut()">Sign Out</button>
             </div>
         </div>
 
@@ -287,7 +364,6 @@
                         <option value="glm-5.1">GLM 5.1</option>
                         <option value="gpt-oss:20b">GPT-OSS (20B)</option>
                         <option value="nemotron-3-super">Nemotron 3 Super</option>
-                        <option value="rnj-1:8b">RNJ-1 (8B)</option>
                     </select>
                 </div>
             </div>
@@ -307,56 +383,9 @@
     </div>
 
     <script>
-        // Wait for Clerk to load
-        window.addEventListener('load', async () => {
-            if (!window.Clerk) {
-                document.getElementById('clerk-sign-in').innerHTML = 
-                    '<p style="color:red;">Failed to load authentication. Please disable tracking prevention or try a different browser.</p>';
-                return;
-            }
-
-            const clerk = window.Clerk;
-            
-            clerk.addListener(({ user }) => {
-                if (user) {
-                    currentUser = user;
-                    showApp(user);
-                } else {
-                    currentUser = null;
-                    showAuth();
-                }
-            });
-            
-            await clerk.load();
-            
-            if (clerk.user) {
-                currentUser = clerk.user;
-                showApp(clerk.user);
-            } else {
-                showAuth();
-            }
-
-            function showAuth() {
-                document.getElementById('authScreen').style.display = 'flex';
-                document.getElementById('appScreen').style.display = 'none';
-                
-                clerk.mountSignIn(document.getElementById('clerk-sign-in'));
-            }
-
-            function showApp(user) {
-                document.getElementById('authScreen').style.display = 'none';
-                document.getElementById('appScreen').style.display = 'flex';
-                
-                const name = user.fullName || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User';
-                document.getElementById('userName').textContent = name;
-                if (user.imageUrl) {
-                    document.getElementById('userAvatar').style.backgroundImage = `url(${user.imageUrl})`;
-                }
-                
-                loadConversations();
-            }
-        });
-
+        // ----- NEON AUTH CONFIG -----
+        const AUTH_BASE_URL = '/api/auth';
+        
         // ----- APP STATE -----
         const API_URL = '/api/chat';
         const FALLBACK_MODEL = 'gemini-3-flash-preview';
@@ -366,21 +395,182 @@
         let conversationHistory = [];
         let isProcessing = false;
 
-        async function signOut() {
-            if (window.Clerk) {
-                await window.Clerk.signOut();
+        // ----- AUTH UI -----
+        function showLogin() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('signupForm').style.display = 'none';
+            clearErrors();
+        }
+
+        function showSignup() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('signupForm').style.display = 'block';
+            clearErrors();
+        }
+
+        function clearErrors() {
+            document.getElementById('loginError').style.display = 'none';
+            document.getElementById('signupError').style.display = 'none';
+        }
+
+        function showError(type, message) {
+            const el = document.getElementById(type + 'Error');
+            el.textContent = message;
+            el.style.display = 'block';
+        }
+
+        function setLoading(btnId, loading) {
+            const btn = document.getElementById(btnId);
+            btn.disabled = loading;
+            btn.textContent = loading ? 'Please wait...' : (btnId === 'loginBtn' ? 'Sign In' : 'Create Account');
+        }
+
+        // ----- AUTH ACTIONS -----
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                showError('login', 'Please fill in all fields');
+                return;
+            }
+
+            setLoading('loginBtn', true);
+            clearErrors();
+
+            try {
+                const response = await fetch(AUTH_BASE_URL + '/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Login failed');
+                }
+
+                currentUser = data.user;
+                localStorage.setItem('ava_session', JSON.stringify(data.session));
+                showApp();
+            } catch (error) {
+                showError('login', error.message);
+            } finally {
+                setLoading('loginBtn', false);
             }
         }
 
+        async function handleSignup() {
+            const name = document.getElementById('signupName').value.trim();
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value;
+
+            if (!name || !email || !password) {
+                showError('signup', 'Please fill in all fields');
+                return;
+            }
+
+            if (password.length < 8) {
+                showError('signup', 'Password must be at least 8 characters');
+                return;
+            }
+
+            setLoading('signupBtn', true);
+            clearErrors();
+
+            try {
+                const response = await fetch(AUTH_BASE_URL + '/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Signup failed');
+                }
+
+                currentUser = data.user;
+                localStorage.setItem('ava_session', JSON.stringify(data.session));
+                showApp();
+            } catch (error) {
+                showError('signup', error.message);
+            } finally {
+                setLoading('signupBtn', false);
+            }
+        }
+
+        async function handleSignOut() {
+            try {
+                await fetch(AUTH_BASE_URL + '/logout', { method: 'POST' });
+            } catch (e) { /* ignore */ }
+            
+            currentUser = null;
+            currentConversationId = null;
+            conversationHistory = [];
+            localStorage.removeItem('ava_session');
+            
+            document.getElementById('authScreen').style.display = 'flex';
+            document.getElementById('appScreen').style.display = 'none';
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+            showLogin();
+        }
+
+        // ----- CHECK EXISTING SESSION -----
+        async function checkSession() {
+            const saved = localStorage.getItem('ava_session');
+            if (!saved) return false;
+
+            try {
+                const response = await fetch(AUTH_BASE_URL + '/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: saved
+                });
+                
+                const data = await response.json();
+                if (data.user) {
+                    currentUser = data.user;
+                    showApp();
+                    return true;
+                }
+            } catch (e) {
+                localStorage.removeItem('ava_session');
+            }
+            return false;
+        }
+
+        // ----- SHOW APP -----
+        function showApp() {
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('appScreen').style.display = 'flex';
+            
+            // Update user info
+            const name = currentUser.name || currentUser.email?.split('@')[0] || 'User';
+            document.getElementById('userName').textContent = name;
+            document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
+            
+            loadConversations();
+        }
+
+        // ----- CHAT HISTORY -----
         async function loadConversations() {
             if (!currentUser) return;
             try {
                 const response = await fetch(API_URL, {
                     method: 'GET',
-                    headers: { 'x-user-id': currentUser.id }
+                    headers: { 
+                        'x-user-id': currentUser.id,
+                        'Authorization': 'Bearer ' + (JSON.parse(localStorage.getItem('ava_session'))?.access_token || '')
+                    }
                 });
+                
                 const data = await response.json();
                 const list = document.getElementById('conversationsList');
+                
                 if (data.conversations && data.conversations.length > 0) {
                     list.innerHTML = data.conversations.map(conv => `
                         <div class="conversation-item ${conv.id === currentConversationId ? 'active' : ''}"
@@ -403,20 +593,25 @@
                     method: 'GET',
                     headers: {
                         'x-user-id': currentUser.id,
-                        'x-conversation-id': convId
+                        'x-conversation-id': convId,
+                        'Authorization': 'Bearer ' + (JSON.parse(localStorage.getItem('ava_session'))?.access_token || '')
                     }
                 });
+                
                 const data = await response.json();
                 currentConversationId = convId;
+                
                 const chatMessages = document.getElementById('chatMessages');
                 chatMessages.innerHTML = '';
                 conversationHistory = [];
+                
                 if (data.messages) {
                     data.messages.forEach(msg => {
                         addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', new Date(msg.created_at));
                         conversationHistory.push({ role: msg.role, content: msg.content });
                     });
                 }
+                
                 loadConversations();
                 document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
             } catch (error) {
@@ -436,6 +631,7 @@
             loadConversations();
         }
 
+        // ----- MESSAGING -----
         function getFormattedTime() {
             return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
@@ -489,7 +685,10 @@
                     try {
                         const response = await fetch(API_URL, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + (JSON.parse(localStorage.getItem('ava_session'))?.access_token || '')
+                            },
                             body: JSON.stringify({
                                 model,
                                 messages: conversationHistory,
@@ -497,6 +696,7 @@
                                 conversationId: currentConversationId
                             })
                         });
+                        
                         if (response.ok) {
                             result = await response.json();
                             if (model !== MODEL_NAME) {
@@ -528,7 +728,18 @@
             }
         }
 
-        document.getElementById('userInput').focus();
+        // ----- INITIALIZE -----
+        async function init() {
+            const hasSession = await checkSession();
+            if (!hasSession) {
+                document.getElementById('authScreen').style.display = 'flex';
+                document.getElementById('appScreen').style.display = 'none';
+                showLogin();
+            }
+            document.getElementById('userInput').focus();
+        }
+
+        init();
     </script>
 </body>
 </html>
