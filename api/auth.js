@@ -22,10 +22,11 @@ export default async function handler(req, res) {
         return;
     }
 
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const action = url.pathname.split('/').pop();
+    // Parse the action from the query string
+    const url = new URL(req.url, 'http://localhost');
+    const action = url.searchParams.get('action') || '';
 
-    // SIGNUP
+    // ----- SIGNUP -----
     if (req.method === 'POST' && action === 'signup') {
         const { email, password, name } = req.body || {};
         if (!email || !password) {
@@ -52,7 +53,7 @@ export default async function handler(req, res) {
         }
     }
 
-    // LOGIN
+    // ----- LOGIN -----
     if (req.method === 'POST' && action === 'login') {
         const { email, password } = req.body || {};
         if (!email || !password) {
@@ -78,7 +79,7 @@ export default async function handler(req, res) {
         }
     }
 
-    // VERIFY
+    // ----- VERIFY -----
     if (req.method === 'POST' && action === 'verify') {
         const { access_token } = req.body || {};
         if (!access_token) {
@@ -99,10 +100,10 @@ export default async function handler(req, res) {
         }
     }
 
-    // LOGOUT
+    // ----- LOGOUT -----
     if (req.method === 'POST' && action === 'logout') {
         return res.status(200).json({ success: true });
     }
 
-    return res.status(404).json({ error: 'Not found' });
+    return res.status(404).json({ error: 'Not found', action });
 }
