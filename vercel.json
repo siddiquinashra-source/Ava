@@ -2,7 +2,17 @@
   "functions": {
     "api/chat.js": {
       "memory": 256,
+      "maxDuration": 60
+    },
+    "api/auth.js": {
+      "memory": 256,
       "maxDuration": 30
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/api/auth/login", "destination": "/api/auth?action=login" },
+    { "source": "/api/auth/signup", "destination": "/api/auth?action=signup" },
+    { "source": "/api/auth/verify", "destination": "/api/auth?action=verify" },
+    { "source": "/api/auth/logout", "destination": "/api/auth?action=logout" }
+  ]
 }
