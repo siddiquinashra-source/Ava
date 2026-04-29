@@ -107,6 +107,7 @@
             font-size: 14px;
             font-weight: 600;
         }
+        .new-chat-btn:hover { opacity: 0.9; }
         .conversations-list {
             flex: 1;
             overflow-y: auto;
@@ -383,19 +384,19 @@
     </div>
 
     <script>
-        // ----- NEON AUTH CONFIG -----
-        const AUTH_BASE_URL = '/api/auth';
-        
-        // ----- APP STATE -----
+        // ----- CONFIG -----
         const API_URL = '/api/chat';
+        const AUTH_URL = '/api/auth';
         const FALLBACK_MODEL = 'gemini-3-flash-preview';
         let MODEL_NAME = 'gemini-3-flash-preview';
+        
+        // ----- STATE -----
         let currentUser = null;
         let currentConversationId = null;
         let conversationHistory = [];
         let isProcessing = false;
 
-        // ----- AUTH UI -----
+        // ----- AUTH UI HELPERS -----
         function showLogin() {
             document.getElementById('loginForm').style.display = 'block';
             document.getElementById('signupForm').style.display = 'none';
@@ -425,6 +426,16 @@
             btn.textContent = loading ? 'Please wait...' : (btnId === 'loginBtn' ? 'Sign In' : 'Create Account');
         }
 
+        function getToken() {
+            const saved = localStorage.getItem('ava_session');
+            if (!saved) return null;
+            try {
+                return JSON.parse(saved).access_token;
+            } catch (e) {
+                return null;
+            }
+        }
+
         // ----- AUTH ACTIONS -----
         async function handleLogin() {
             const email = document.getElementById('loginEmail').value.trim();
@@ -439,7 +450,7 @@
             clearErrors();
 
             try {
-                const response = await fetch(AUTH_BASE_URL + '/login', {
+                const response = await fetch(AUTH_URL + '/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -448,7 +459,7 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(data.error || 'Login failed');
+                    throw new Error(data.error || 'Invalid email or password');
                 }
 
                 currentUser = data.user;
@@ -480,7 +491,7 @@
             clearErrors();
 
             try {
-                const response = await fetch(AUTH_BASE_URL + '/signup', {
+                const response = await fetch(AUTH_URL + '/signup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, email, password })
@@ -503,15 +514,21 @@
         }
 
         async function handleSignOut() {
-            try {
-                await fetch(AUTH_BASE_URL + '/logout', { method: 'POST' });
-            } catch (e) { /* ignore */ }
-            
+            const token = getToken();
+            if (token) {
+                try {
+                    await fetch(AUTH_URL + '/logout', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                } catch (e) { /* ignore */ }
+            }
+
             currentUser = null;
             currentConversationId = null;
             conversationHistory = [];
             localStorage.removeItem('ava_session');
-            
+
             document.getElementById('authScreen').style.display = 'flex';
             document.getElementById('appScreen').style.display = 'none';
             document.getElementById('loginEmail').value = '';
@@ -519,18 +536,18 @@
             showLogin();
         }
 
-        // ----- CHECK EXISTING SESSION -----
         async function checkSession() {
             const saved = localStorage.getItem('ava_session');
             if (!saved) return false;
 
             try {
-                const response = await fetch(AUTH_BASE_URL + '/verify', {
+                const session = JSON.parse(saved);
+                const response = await fetch(AUTH_URL + '/verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: saved
+                    body: JSON.stringify({ access_token: session.access_token })
                 });
-                
+
                 const data = await response.json();
                 if (data.user) {
                     currentUser = data.user;
@@ -547,12 +564,11 @@
         function showApp() {
             document.getElementById('authScreen').style.display = 'none';
             document.getElementById('appScreen').style.display = 'flex';
-            
-            // Update user info
+
             const name = currentUser.name || currentUser.email?.split('@')[0] || 'User';
             document.getElementById('userName').textContent = name;
             document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
-            
+
             loadConversations();
         }
 
@@ -562,15 +578,15 @@
             try {
                 const response = await fetch(API_URL, {
                     method: 'GET',
-                    headers: { 
+                    headers: {
                         'x-user-id': currentUser.id,
-                        'Authorization': 'Bearer ' + (JSON.parse(localStorage.getItem('ava_session'))?.access_token || '')
+                        'Authorization': 'Bearer ' + getToken()
                     }
                 });
-                
+
                 const data = await response.json();
                 const list = document.getElementById('conversationsList');
-                
+
                 if (data.conversations && data.conversations.length > 0) {
                     list.innerHTML = data.conversations.map(conv => `
                         <div class="conversation-item ${conv.id === currentConversationId ? 'active' : ''}"
@@ -594,24 +610,24 @@
                     headers: {
                         'x-user-id': currentUser.id,
                         'x-conversation-id': convId,
-                        'Authorization': 'Bearer ' + (JSON.parse(localStorage.getItem('ava_session'))?.access_token || '')
+                        'Authorization': 'Bearer ' + getToken()
                     }
                 });
-                
+
                 const data = await response.json();
                 currentConversationId = convId;
-                
+
                 const chatMessages = document.getElementById('chatMessages');
                 chatMessages.innerHTML = '';
                 conversationHistory = [];
-                
+
                 if (data.messages) {
                     data.messages.forEach(msg => {
                         addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', new Date(msg.created_at));
                         conversationHistory.push({ role: msg.role, content: msg.content });
                     });
                 }
-                
+
                 loadConversations();
                 document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
             } catch (error) {
@@ -639,7 +655,7 @@
         function addMessage(content, type, time = new Date()) {
             const div = document.createElement('div');
             div.className = `message ${type}-message`;
-            div.innerHTML = escapeHtml(content).replace(/\n/g, '<br>') + 
+            div.innerHTML = escapeHtml(content).replace(/\n/g, '<br>') +
                 `<div class="message-time">${time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
             document.getElementById('chatMessages').appendChild(div);
             document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
@@ -685,9 +701,9 @@
                     try {
                         const response = await fetch(API_URL, {
                             method: 'POST',
-                            headers: { 
+                            headers: {
                                 'Content-Type': 'application/json',
-                                'Authorization': 'Bearer ' + (JSON.parse(localStorage.getItem('ava_session'))?.access_token || '')
+                                'Authorization': 'Bearer ' + getToken()
                             },
                             body: JSON.stringify({
                                 model,
@@ -696,7 +712,7 @@
                                 conversationId: currentConversationId
                             })
                         });
-                        
+
                         if (response.ok) {
                             result = await response.json();
                             if (model !== MODEL_NAME) {
@@ -728,7 +744,7 @@
             }
         }
 
-        // ----- INITIALIZE -----
+        // ----- INIT -----
         async function init() {
             const hasSession = await checkSession();
             if (!hasSession) {
@@ -736,7 +752,7 @@
                 document.getElementById('appScreen').style.display = 'none';
                 showLogin();
             }
-            document.getElementById('userInput').focus();
+            document.getElementById('userInput')?.focus();
         }
 
         init();
