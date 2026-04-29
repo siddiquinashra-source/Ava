@@ -492,7 +492,7 @@
             }
         }
 
-        // ----- AUTH ACTIONS -----
+        // ----- AUTH ACTIONS (using query parameters) -----
         async function handleLogin() {
             const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
@@ -506,7 +506,7 @@
             clearErrors();
 
             try {
-                const response = await fetch(AUTH_URL + '/login', {
+                const response = await fetch(AUTH_URL + '?action=login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
@@ -547,7 +547,7 @@
             clearErrors();
 
             try {
-                const response = await fetch(AUTH_URL + '/signup', {
+                const response = await fetch(AUTH_URL + '?action=signup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, email, password })
@@ -573,7 +573,7 @@
             const token = getToken();
             if (token) {
                 try {
-                    await fetch(AUTH_URL + '/logout', {
+                    await fetch(AUTH_URL + '?action=logout', {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
@@ -598,7 +598,7 @@
 
             try {
                 const session = JSON.parse(saved);
-                const response = await fetch(AUTH_URL + '/verify', {
+                const response = await fetch(AUTH_URL + '?action=verify', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ access_token: session.access_token })
@@ -804,22 +804,17 @@
 
             addMessage(message, 'user');
             
-            // Add user context to conversation
             const userName = getUserName();
-            const contextMessage = {
-                role: 'user',
-                content: message
-            };
             
-            // Add system context about the user
+            // Add system context about the user (only once per conversation)
             if (conversationHistory.length === 0 && currentUser) {
                 conversationHistory.push({
                     role: 'system',
-                    content: `The user's name is ${userName}. Use their name sparingly — only in greetings, goodbyes, or when it feels natural. Never use their name in every message.``
+                    content: `The user's name is ${userName}. Use their name sparingly — only in greetings, goodbyes, or when it feels natural. Never use their name in every message.`
                 });
             }
             
-            conversationHistory.push(contextMessage);
+            conversationHistory.push({ role: 'user', content: message });
             showTyping();
 
             try {
