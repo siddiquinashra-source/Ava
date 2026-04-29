@@ -1,94 +1,142 @@
 import { neon } from '@neondatabase/serverless';
-import { createNeonAuth } from '@neondatabase/auth/next/server';
+import crypto from 'crypto';
 
-// Database connection
-const sql = neon(process.env.NEON_DATABASE_URL);
+const sql = neon('postgresql://neondb_owner:npg_RKe0bD6jwSrh@ep-quiet-cherry-a45jj9ee.us-east-1.aws.neon.tech/neondb?sslmode=require');
+const OLLAMA_API_KEY = 'fd6bfc3a5e534979a562387474fff219.XWr5VBH7jhPIdBeYkljTINc1';
 
-// Neon Auth setup
-const auth = createNeonAuth({
-    baseUrl: process.env.VERCEL_URL || 'http://localhost:3000',
-    cookies: {
-        secret: process.env.NEON_AUTH_COOKIE_SECRET
+function verifyToken(token) {
+    if (!token) return null;
+    try {
+        const payload = JSON.parse(Buffer.from(token, 'base64').toString());
+        if (payload.exp < Date.now()) return null;
+        return payload;
+    } catch (e) {
+        return null;
     }
-});
-
-const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || 'fd6bfc3a5e534979a562387474fff219.XWr5VBH7jhPIdBeYkljTINc1';
+}
 
 export default async function handler(req, res) {
-    // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, x-conversation-id');
 
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
     }
 
-    // Verify auth
-    const session = await auth.getSession(req);
-    
-    // GET: Load history
+    // ----- GET: Load history -----
     if (req.method === 'GET') {
-        if (!session) return res.status(401).json({ error: 'Not authenticated' });
-        
+        const userId = req.headers['x-user-id'];
+        const conversationId = req.headers['x-conversation-id'];
+
+        if (!userId) {
+            return res.status(401).json({ error: 'User ID required' });
+        }
+
         try {
-            const conversations = await sql`
-                SELECT id, title, created_at, updated_at
-                FROM conversations
-                WHERE user_id = ${session.user.id}
-                ORDER BY updated_at DESC
-            `;
-            return res.status(200).json({ conversations });
+            if (conversationId) {
+                const messages = await sql`
+                    SELECT role, content, model, created_at
+                    FROM messages
+                    WHERE conversation_id = ${conversationId}
+                    ORDER BY created_at ASC
+                `;
+                return res.status(200).json({ messages });
+            } else {
+                const conversations = await sql`
+                    SELECT id, title, created_at, updated_at
+                    FROM conversations
+                    WHERE user_id = ${userId}
+                    ORDER BY updated_at DESC
+                `;
+                return res.status(200).json({ conversations });
+            }
         } catch (error) {
             return res.status(500).json({ error: error.message });
         }
     }
 
-    // POST: Chat + Save
+    // ----- POST: Chat + Save -----
     if (req.method === 'POST') {
-        const { model, messages, conversationId } = req.body;
-        
+        const { model, messages, userId, conversationId } = req.body;
+
+        if (!model || !messages) {
+            return res.status(400).json({ error: 'Missing model or messages' });
+        }
+
         try {
+            console.log('Calling Ollama with model:', model);
+            
             const response = await fetch('https://api.ollama.com/api/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${OLLAMA_API_KEY}`
                 },
-                body: JSON.stringify({ model, messages, stream: false })
+                body: JSON.stringify({
+                    model: model,
+                    messages: messages,
+                    stream: false
+                })
             });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                console.error('Ollama error:', errText);
+                return res.status(response.status).json({ error: errText });
+            }
 
             const data = await response.json();
             const botReply = data.message?.content || data.response;
+            
+            console.log('Got reply, length:', botReply?.length);
 
-            // Save if authenticated
-            if (session && botReply) {
-                let convId = conversationId;
+            let convId = conversationId;
+
+            // Save to database if user is logged in
+            if (userId && botReply) {
                 if (!convId) {
+                    const lastMsg = messages[messages.length - 1];
+                    const title = lastMsg?.content?.substring(0, 100) || 'New Chat';
                     const newConv = await sql`
                         INSERT INTO conversations (user_id, title)
-                        VALUES (${session.user.id}, ${messages[messages.length-1].content.substring(0, 100)})
+                        VALUES (${userId}, ${title})
                         RETURNING id
                     `;
                     convId = newConv[0].id;
                 }
-                
+
+                const lastMsg = messages[messages.length - 1];
                 await sql`
                     INSERT INTO messages (conversation_id, role, content, model)
-                    VALUES (${convId}, 'user', ${messages[messages.length-1].content}, ${model}),
-                           (${convId}, 'assistant', ${botReply}, ${model})
+                    VALUES (${convId}, 'user', ${lastMsg.content}, ${model})
                 `;
-                
-                return res.status(200).json({ 
-                    message: { content: botReply }, 
-                    conversationId: convId 
+                await sql`
+                    INSERT INTO messages (conversation_id, role, content, model)
+                    VALUES (${convId}, 'assistant', ${botReply}, ${model})
+                `;
+                await sql`
+                    UPDATE conversations SET updated_at = NOW()
+                    WHERE id = ${convId}
+                `;
+
+                return res.status(200).json({
+                    message: { content: botReply },
+                    conversationId: convId
                 });
             }
 
-            return res.status(200).json({ message: { content: botReply } });
+            // Not logged in — just return the reply
+            return res.status(200).json({
+                message: { content: botReply }
+            });
+
         } catch (error) {
+            console.error('Fatal error:', error);
             return res.status(500).json({ error: error.message });
         }
     }
+
+    return res.status(405).json({ error: 'Method not allowed' });
 }
