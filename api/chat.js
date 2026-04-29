@@ -1,29 +1,21 @@
 import { neon } from '@neondatabase/serverless';
-import crypto from 'crypto';
 
 const sql = neon('postgresql://neondb_owner:npg_RKe0bD6jwSrh@ep-quiet-cherry-a45jj9ee.us-east-1.aws.neon.tech/neondb?sslmode=require');
 const OLLAMA_API_KEY = 'fd6bfc3a5e534979a562387474fff219.XWr5VBH7jhPIdBeYkljTINc1';
 
-function verifyToken(token) {
-    if (!token) return null;
-    try {
-        const payload = JSON.parse(Buffer.from(token, 'base64').toString());
-        if (payload.exp < Date.now()) return null;
-        return payload;
-    } catch (e) {
-        return null;
-    }
-}
-
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, x-conversation-id');
 
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
     }
+
+    // Parse action from query string
+    const url = new URL(req.url, 'http://localhost');
+    const action = url.searchParams.get('action') || '';
 
     // ----- GET: Load history -----
     if (req.method === 'GET') {
@@ -57,8 +49,28 @@ export default async function handler(req, res) {
         }
     }
 
+    // ----- DELETE: Remove conversation -----
+    if (req.method === 'POST' && action === 'delete') {
+        const { conversationId } = req.body || {};
+        const userId = req.headers['x-user-id'];
+
+        if (!conversationId || !userId) {
+            return res.status(400).json({ error: 'Missing conversationId or userId' });
+        }
+
+        try {
+            // Delete messages first, then conversation
+            await sql`DELETE FROM messages WHERE conversation_id = ${conversationId}`;
+            await sql`DELETE FROM conversations WHERE id = ${conversationId} AND user_id = ${userId}`;
+            
+            return res.status(200).json({ success: true });
+        } catch (error) {
+            return res.status(500).json({ error: error.message });
+        }
+    }
+
     // ----- POST: Chat + Save -----
-    if (req.method === 'POST') {
+    if (req.method === 'POST' && action !== 'delete') {
         const { model, messages, userId, conversationId } = req.body;
 
         if (!model || !messages) {
@@ -137,24 +149,6 @@ export default async function handler(req, res) {
             return res.status(500).json({ error: error.message });
         }
     }
-    // ----- DELETE CONVERSATION -----
-    if (req.method === 'POST' && action === 'delete') {
-        const { conversationId } = req.body || {};
-        const userId = req.headers['x-user-id'];
 
-        if (!conversationId || !userId) {
-            return res.status(400).json({ error: 'Missing conversationId or userId' });
-        }
-
-        try {
-            // Delete messages first (CASCADE should handle this, but being safe)
-            await sql`DELETE FROM messages WHERE conversation_id = ${conversationId}`;
-            await sql`DELETE FROM conversations WHERE id = ${conversationId} AND user_id = ${userId}`;
-            
-            return res.status(200).json({ success: true });
-        } catch (error) {
-            return res.status(500).json({ error: error.message });
-        }
-    }
     return res.status(405).json({ error: 'Method not allowed' });
 }
