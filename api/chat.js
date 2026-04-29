@@ -1,8 +1,10 @@
 export default async function handler(req, res) {
+    // Allow requests from any origin (CORS)
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+    // Handle CORS preflight
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
@@ -14,11 +16,14 @@ export default async function handler(req, res) {
     }
 
     try {
+        // --- YOUR NEW API KEY (temporarily hardcoded) ---
+        const apiKey = 'fd6bfc3a5e534979a562387474fff219.XWr5VBH7jhPIdBeYkljTINc1';
+
         const response = await fetch('https://api.ollama.com/api/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer 85319c4b16b743b38e8c2e3cf8f40546.jCUBdTcmQzTw16gisN8Xh8z1`
+                'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify(req.body)
         });
