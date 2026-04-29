@@ -16,8 +16,6 @@ export default async function handler(req, res) {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const action = url.pathname.split('/').pop();
 
-    console.log('Auth action:', action); // Debug
-
     // ----- SIGNUP -----
     if (req.method === 'POST' && action === 'signup') {
         const { email, password, name } = req.body || {};
@@ -37,15 +35,33 @@ export default async function handler(req, res) {
                 })
             });
 
-            const data = await response.json();
+            const text = await response.text();
+            console.log('Signup response:', text);
 
-            if (!response.ok) {
-                return res.status(response.status).json({ error: data.message || data.error || 'Signup failed' });
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                return res.status(500).json({ 
+                    error: 'Invalid response from auth server',
+                    details: text.substring(0, 200)
+                });
             }
 
+            if (!response.ok) {
+                return res.status(response.status).json({ 
+                    error: data.message || data.error || 'Signup failed' 
+                });
+            }
+
+            // Return user data
             return res.status(200).json({
-                user: data.user || { id: data.id, email, name: name || email.split('@')[0] },
-                session: data.session || data
+                user: data.user || { 
+                    id: data.id || 'user_' + Date.now(), 
+                    email, 
+                    name: name || email.split('@')[0] 
+                },
+                session: data.session || { access_token: data.access_token }
             });
         } catch (error) {
             return res.status(500).json({ error: error.message });
@@ -67,28 +83,28 @@ export default async function handler(req, res) {
                 body: JSON.stringify({ email, password })
             });
 
-            const data = await response.json();
+            const text = await response.text();
+            console.log('Login response:', text);
 
-            if (!response.ok) {
-                return res.status(response.status).json({ error: data.message || data.error || 'Login failed' });
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                return res.status(500).json({ 
+                    error: 'Invalid response from auth server',
+                    details: text.substring(0, 200)
+                });
             }
 
-            // Get user info
-            let userData = { id: data.user?.id, email };
-            try {
-                const userResponse = await fetch(`${AUTH_URL}/user`, {
-                    headers: { 'Authorization': `Bearer ${data.access_token}` }
+            if (!response.ok) {
+                return res.status(response.status).json({ 
+                    error: data.message || data.error || 'Login failed' 
                 });
-                if (userResponse.ok) {
-                    userData = await userResponse.json();
-                }
-            } catch (e) {
-                console.log('Could not fetch user details');
             }
 
             return res.status(200).json({
                 session: data,
-                user: userData
+                user: data.user || { id: data.user_id, email }
             });
         } catch (error) {
             return res.status(500).json({ error: error.message });
@@ -108,12 +124,21 @@ export default async function handler(req, res) {
                 headers: { 'Authorization': `Bearer ${access_token}` }
             });
 
+            const text = await response.text();
+            console.log('Verify response:', text);
+
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                return res.status(401).json({ error: 'Invalid token' });
+            }
+
             if (!response.ok) {
                 return res.status(401).json({ error: 'Invalid token' });
             }
 
-            const userData = await response.json();
-            return res.status(200).json({ user: userData });
+            return res.status(200).json({ user: data });
         } catch (error) {
             return res.status(401).json({ error: 'Token verification failed' });
         }
@@ -124,10 +149,5 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true });
     }
 
-    // If no action matched
-    return res.status(404).json({ 
-        error: 'Not found',
-        action: action,
-        method: req.method 
-    });
+    return res.status(404).json({ error: 'Not found', action });
 }
