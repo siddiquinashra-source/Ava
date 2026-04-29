@@ -694,6 +694,34 @@
             }
         }
 
+                async function deleteConversation(event, convId) {
+            event.stopPropagation(); // Prevent triggering loadConversation
+            
+            if (!confirm('Delete this chat? This cannot be undone.')) return;
+            
+            try {
+                const response = await fetch(API_URL + '?action=delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getToken(),
+                        'x-user-id': currentUser.id
+                    },
+                    body: JSON.stringify({ conversationId: convId })
+                });
+
+                if (response.ok) {
+                    // If we deleted the current conversation, start a new one
+                    if (currentConversationId === convId) {
+                        newChat();
+                    }
+                    loadConversations();
+                }
+            } catch (error) {
+                console.error('Failed to delete:', error);
+            }
+        }
+
         async function loadConversation(convId) {
             if (!currentUser) return;
             try {
