@@ -4,7 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ava – AI Assistant</title>
-    <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
+    <script
+        async
+        crossorigin="anonymous"
+        data-clerk-publishable-key="pk_test_c3F1YXJlLXdoYWxlLTQ2LmNsZXJrLmFjY291bnRzLmRldiQ"
+        src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+        type="text/javascript"
+    ></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -14,7 +20,6 @@
             overflow: hidden;
         }
 
-        /* Auth Screen */
         .auth-container {
             height: 100vh;
             display: flex;
@@ -33,10 +38,9 @@
         .auth-box h2 { margin-bottom: 5px; font-size: 28px; }
         .auth-box p { margin-bottom: 25px; color: #666; }
         #clerk-sign-in {
-            min-height: 300px;
+            min-height: 250px;
         }
 
-        /* App Layout */
         .app-layout {
             display: flex;
             height: 100vh;
@@ -66,7 +70,6 @@
             font-size: 14px;
             font-weight: 600;
         }
-        .new-chat-btn:hover { opacity: 0.9; }
         .conversations-list {
             flex: 1;
             overflow-y: auto;
@@ -112,7 +115,6 @@
             cursor: pointer;
             font-size: 13px;
         }
-        .sign-out-btn:hover { background: rgba(255,255,255,0.2); }
 
         .chat-container {
             flex: 1;
@@ -243,7 +245,6 @@
     </style>
 </head>
 <body>
-    <!-- Auth Screen -->
     <div id="authScreen" class="auth-container">
         <div class="auth-box">
             <h2>✨ Ava</h2>
@@ -252,7 +253,6 @@
         </div>
     </div>
 
-    <!-- App Screen -->
     <div id="appScreen" class="app-layout" style="display:none;">
         <div class="sidebar">
             <div class="sidebar-header">
@@ -307,31 +307,20 @@
     </div>
 
     <script>
-        // ----- CLERK AUTH -----
-        const CLERK_KEY = 'pk_test_c3F1YXJlLXdoYWxlLTQ2LmNsZXJrLmFjY291bnRzLmRldiQ';
-        
-        let clerk;
-        let currentUser = null;
-        
-        // ----- APP STATE -----
-        const API_URL = '/api/chat';
-        const FALLBACK_MODEL = 'gemini-3-flash-preview';
-        const TINY_FALLBACK = 'gemma3:4b';
-        
-        let MODEL_NAME = 'gemini-3-flash-preview';
-        let currentConversationId = null;
-        let conversationHistory = [];
-        let isProcessing = false;
+        // Wait for Clerk to load
+        window.addEventListener('load', async () => {
+            if (!window.Clerk) {
+                document.getElementById('clerk-sign-in').innerHTML = 
+                    '<p style="color:red;">Failed to load authentication. Please disable tracking prevention or try a different browser.</p>';
+                return;
+            }
 
-        // ----- INITIALIZE -----
-        async function init() {
-            clerk = new Clerk(CLERK_KEY);
+            const clerk = window.Clerk;
             
-            // Listen for auth state changes
             clerk.addListener(({ user }) => {
                 if (user) {
                     currentUser = user;
-                    showApp();
+                    showApp(user);
                 } else {
                     currentUser = null;
                     showAuth();
@@ -340,66 +329,58 @@
             
             await clerk.load();
             
-            // Check if already signed in
             if (clerk.user) {
                 currentUser = clerk.user;
-                showApp();
+                showApp(clerk.user);
             } else {
                 showAuth();
             }
-        }
 
-        function showAuth() {
-            document.getElementById('authScreen').style.display = 'flex';
-            document.getElementById('appScreen').style.display = 'none';
-            
-            // Mount Clerk sign-in
-            clerk.mountSignIn(document.getElementById('clerk-sign-in'), {
-                appearance: {
-                    elements: {
-                        formButtonPrimary: 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;',
-                        card: 'box-shadow: none;'
-                    }
-                }
-            });
-        }
-
-        function showApp() {
-            document.getElementById('authScreen').style.display = 'none';
-            document.getElementById('appScreen').style.display = 'flex';
-            
-            // Update user info
-            const name = currentUser.fullName || 
-                        currentUser.primaryEmailAddress?.emailAddress?.split('@')[0] || 
-                        'User';
-            document.getElementById('userName').textContent = name;
-            
-            if (currentUser.imageUrl) {
-                document.getElementById('userAvatar').style.backgroundImage = `url(${currentUser.imageUrl})`;
+            function showAuth() {
+                document.getElementById('authScreen').style.display = 'flex';
+                document.getElementById('appScreen').style.display = 'none';
+                
+                clerk.mountSignIn(document.getElementById('clerk-sign-in'));
             }
-            
-            loadConversations();
-        }
+
+            function showApp(user) {
+                document.getElementById('authScreen').style.display = 'none';
+                document.getElementById('appScreen').style.display = 'flex';
+                
+                const name = user.fullName || user.primaryEmailAddress?.emailAddress?.split('@')[0] || 'User';
+                document.getElementById('userName').textContent = name;
+                if (user.imageUrl) {
+                    document.getElementById('userAvatar').style.backgroundImage = `url(${user.imageUrl})`;
+                }
+                
+                loadConversations();
+            }
+        });
+
+        // ----- APP STATE -----
+        const API_URL = '/api/chat';
+        const FALLBACK_MODEL = 'gemini-3-flash-preview';
+        let MODEL_NAME = 'gemini-3-flash-preview';
+        let currentUser = null;
+        let currentConversationId = null;
+        let conversationHistory = [];
+        let isProcessing = false;
 
         async function signOut() {
-            if (clerk) {
-                await clerk.signOut();
+            if (window.Clerk) {
+                await window.Clerk.signOut();
             }
         }
 
-        // ----- CHAT HISTORY -----
         async function loadConversations() {
             if (!currentUser) return;
-            
             try {
                 const response = await fetch(API_URL, {
                     method: 'GET',
                     headers: { 'x-user-id': currentUser.id }
                 });
-                
                 const data = await response.json();
                 const list = document.getElementById('conversationsList');
-                
                 if (data.conversations && data.conversations.length > 0) {
                     list.innerHTML = data.conversations.map(conv => `
                         <div class="conversation-item ${conv.id === currentConversationId ? 'active' : ''}"
@@ -411,13 +392,12 @@
                     list.innerHTML = '<p style="color:#999;text-align:center;margin-top:20px;">No conversations yet</p>';
                 }
             } catch (error) {
-                console.error('Load failed:', error);
+                console.error('Failed to load conversations:', error);
             }
         }
 
         async function loadConversation(convId) {
             if (!currentUser) return;
-            
             try {
                 const response = await fetch(API_URL, {
                     method: 'GET',
@@ -426,25 +406,21 @@
                         'x-conversation-id': convId
                     }
                 });
-                
                 const data = await response.json();
                 currentConversationId = convId;
-                
                 const chatMessages = document.getElementById('chatMessages');
                 chatMessages.innerHTML = '';
                 conversationHistory = [];
-                
                 if (data.messages) {
                     data.messages.forEach(msg => {
                         addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', new Date(msg.created_at));
                         conversationHistory.push({ role: msg.role, content: msg.content });
                     });
                 }
-                
                 loadConversations();
                 document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
             } catch (error) {
-                console.error('Load failed:', error);
+                console.error('Failed to load:', error);
             }
         }
 
@@ -453,14 +429,13 @@
             conversationHistory = [];
             document.getElementById('chatMessages').innerHTML = `
                 <div class="message bot-message">
-                    New chat started! Ask me anything. ✨
+                    New chat started! ✨
                     <div class="message-time">${getFormattedTime()}</div>
                 </div>
             `;
             loadConversations();
         }
 
-        // ----- MESSAGING -----
         function getFormattedTime() {
             return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
@@ -507,13 +482,8 @@
             showTyping();
 
             try {
-                // Try selected model, fallback to Gemini, then Gemma
                 let result;
-                const modelsToTry = [
-                    MODEL_NAME,
-                    ...(MODEL_NAME !== FALLBACK_MODEL ? [FALLBACK_MODEL] : []),
-                    TINY_FALLBACK
-                ];
+                const modelsToTry = [MODEL_NAME, ...(MODEL_NAME !== FALLBACK_MODEL ? [FALLBACK_MODEL] : []), 'gemma3:4b'];
 
                 for (const model of modelsToTry) {
                     try {
@@ -527,7 +497,6 @@
                                 conversationId: currentConversationId
                             })
                         });
-
                         if (response.ok) {
                             result = await response.json();
                             if (model !== MODEL_NAME) {
@@ -535,16 +504,13 @@
                             }
                             break;
                         }
-                    } catch (e) {
-                        continue;
-                    }
+                    } catch (e) { continue; }
                 }
 
                 hideTyping();
+                if (!result) throw new Error('All models down');
 
-                if (!result) throw new Error('All models unavailable');
-
-                const botReply = result.message?.content || "Sorry, I couldn't respond.";
+                const botReply = result.message?.content || "Sorry, couldn't respond.";
                 addMessage(botReply, 'bot');
                 conversationHistory.push({ role: 'assistant', content: botReply });
 
@@ -552,10 +518,9 @@
                     currentConversationId = result.conversationId;
                     loadConversations();
                 }
-
             } catch (error) {
                 hideTyping();
-                addMessage('😔 All models are currently unavailable. Please try again.', 'error');
+                addMessage('😔 All models unavailable. Please try again.', 'error');
             } finally {
                 isProcessing = false;
                 document.getElementById('sendButton').disabled = false;
@@ -563,8 +528,7 @@
             }
         }
 
-        // Start the app
-        init();
+        document.getElementById('userInput').focus();
     </script>
 </body>
 </html>
