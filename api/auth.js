@@ -1,10 +1,18 @@
 import { neon } from '@neondatabase/serverless';
 import crypto from 'crypto';
+import { OAuth2Client } from 'google-auth-library';
 
-const sql = neon('postgresql://neondb_owner:npg_RKe0bD6jwSrh@ep-quiet-cherry-a45jj9ee.us-east-1.aws.neon.tech/neondb?sslmode=require');
+// Database connection from environment variable
+const sql = neon(process.env.NEON_DATABASE_URL);
+
+// Google OAuth2 client
+const googleClient = new OAuth2Client({
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET
+});
 
 function hashPassword(password) {
-    return crypto.createHash('sha256').update(password + 'ava-secret-salt').digest('hex');
+    return crypto.createHash('sha256').update(password + (process.env.PASSWORD_SALT || 'ava-secret-salt')).digest('hex');
 }
 
 function generateToken(userId) {
@@ -22,9 +30,105 @@ export default async function handler(req, res) {
         return;
     }
 
-    // Parse the action from the query string
     const url = new URL(req.url, 'http://localhost');
     const action = url.searchParams.get('action') || '';
+
+    // ----- GOOGLE SIGN-IN (ID Token) -----
+    if (req.method === 'POST' && action === 'google') {
+        const { credential } = req.body || {};
+        if (!credential) {
+            return res.status(400).json({ error: 'Missing credential' });
+        }
+
+        try {
+            const ticket = await googleClient.verifyIdToken({
+                idToken: credential,
+                audience: process.env.GOOGLE_CLIENT_ID
+            });
+            const payload = ticket.getPayload();
+            
+            const googleId = payload['sub'];
+            const email = payload['email'];
+            const name = payload['name'] || email.split('@')[0];
+
+            let users = await sql`SELECT id FROM users WHERE id = ${googleId}`;
+            if (users.length === 0) {
+                const emailUsers = await sql`SELECT id FROM users WHERE email = ${email}`;
+                if (emailUsers.length > 0) {
+                    await sql`UPDATE users SET id = ${googleId} WHERE email = ${email}`;
+                } else {
+                    await sql`
+                        INSERT INTO users (id, email, password, name, created_at)
+                        VALUES (${googleId}, ${email}, '', ${name}, NOW())
+                    `;
+                }
+            }
+
+            const token = generateToken(googleId);
+            return res.status(200).json({
+                user: { id: googleId, email, name },
+                session: { access_token: token }
+            });
+        } catch (error) {
+            console.error('Google ID token verification failed:', error);
+            return res.status(401).json({ error: 'Invalid Google credential' });
+        }
+    }
+
+    // ----- GOOGLE AUTH CODE (Popup fallback) -----
+    if (req.method === 'POST' && action === 'google-code') {
+        const { code } = req.body || {};
+        if (!code) {
+            return res.status(400).json({ error: 'Missing auth code' });
+        }
+
+        try {
+            const redirectUri = process.env.VERCEL_URL
+                ? `https://${process.env.VERCEL_URL}/api/auth`
+                : 'http://localhost:3000/api/auth';
+
+            const { tokens } = await googleClient.getToken({
+                code,
+                redirect_uri: redirectUri
+            });
+
+            if (!tokens.id_token) {
+                return res.status(400).json({ error: 'No ID token received' });
+            }
+
+            const ticket = await googleClient.verifyIdToken({
+                idToken: tokens.id_token,
+                audience: process.env.GOOGLE_CLIENT_ID
+            });
+            const payload = ticket.getPayload();
+            
+            const googleId = payload['sub'];
+            const email = payload['email'];
+            const name = payload['name'] || email.split('@')[0];
+
+            let users = await sql`SELECT id FROM users WHERE id = ${googleId}`;
+            if (users.length === 0) {
+                const emailUsers = await sql`SELECT id FROM users WHERE email = ${email}`;
+                if (emailUsers.length > 0) {
+                    await sql`UPDATE users SET id = ${googleId} WHERE email = ${email}`;
+                } else {
+                    await sql`
+                        INSERT INTO users (id, email, password, name, created_at)
+                        VALUES (${googleId}, ${email}, '', ${name}, NOW())
+                    `;
+                }
+            }
+
+            const token = generateToken(googleId);
+            return res.status(200).json({
+                user: { id: googleId, email, name },
+                session: { access_token: token }
+            });
+        } catch (error) {
+            console.error('Google auth code exchange failed:', error);
+            return res.status(401).json({ error: 'Google authentication failed' });
+        }
+    }
 
     // ----- SIGNUP -----
     if (req.method === 'POST' && action === 'signup') {
@@ -66,6 +170,15 @@ export default async function handler(req, res) {
                 WHERE email = ${email} AND password = ${hashedPassword}
             `;
             if (users.length === 0) {
+                const googleUsers = await sql`
+                    SELECT id, email, name FROM users 
+                    WHERE email = ${email} AND password = ''
+                `;
+                if (googleUsers.length > 0) {
+                    return res.status(401).json({ 
+                        error: 'This account uses Google Sign-In. Please click "Continue with Google" to sign in.' 
+                    });
+                }
                 return res.status(401).json({ error: 'Invalid email or password' });
             }
             const user = users[0];
