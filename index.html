@@ -21,7 +21,28 @@
             text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);
         }
         .chat-header h1 { font-size: 26px; margin-bottom: 5px; }
-        .chat-header p { font-size: 13px; opacity: 0.9; }
+        .chat-header p { font-size: 13px; opacity: 0.9; margin-bottom: 8px; }
+        .model-selector {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+        }
+        .model-selector select {
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.15);
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            outline: none;
+            max-width: 90%;
+            backdrop-filter: blur(10px);
+        }
+        .model-selector select option {
+            background: #1a1a3e;
+            color: white;
+        }
         .chat-messages {
             flex: 1; overflow-y: auto; padding: 20px; background: #f8f9fa;
             display: flex; flex-direction: column; gap: 15px;
@@ -56,15 +77,60 @@
 <body>
     <div class="chat-container">
         <div class="chat-header">
-            <h1>✨ Ava – Your AI Assistant</h1>
-            <p>Ava • Powered by Gemini Flash</p>
+            <h1>✨ Ava – Multi-Model Chat</h1>
+            <p>Switch models anytime</p>
+            <div class="model-selector">
+                <select id="modelSelect" onchange="switchModel(this.value)">
+                    <option value="gemini-3-flash-preview" selected>🔹 Gemini 3 Flash</option>
+                    <option value="deepseek-v3.2">🔹 DeepSeek V3.2</option>
+                    <option value="deepseek-v4-pro">🔹 DeepSeek V4 Pro</option>
+                    <option value="deepseek-v4-flash">🔹 DeepSeek V4 Flash</option>
+                    <option value="deepseek-v3.1:671b">🔹 DeepSeek V3.1 (671B)</option>
+                    <option value="mistral-large-3:675b">🔹 Mistral Large 3 (675B)</option>
+                    <option value="ministral-3:3b">🔹 Ministral 3 (3B)</option>
+                    <option value="ministral-3:8b">🔹 Ministral 3 (8B)</option>
+                    <option value="ministral-3:14b">🔹 Ministral 3 (14B)</option>
+                    <option value="qwen3.5:397b">🔹 Qwen 3.5 (397B)</option>
+                    <option value="qwen3-next:80b">🔹 Qwen 3 Next (80B)</option>
+                    <option value="qwen3-coder-next">🔹 Qwen 3 Coder Next</option>
+                    <option value="qwen3-coder:480b">🔹 Qwen 3 Coder (480B)</option>
+                    <option value="qwen3-vl:235b">🔹 Qwen 3 VL (235B)</option>
+                    <option value="qwen3-vl:235b-instruct">🔹 Qwen 3 VL Instruct</option>
+                    <option value="kimi-k2:1t">🔹 Kimi K2 (1T)</option>
+                    <option value="kimi-k2.5">🔹 Kimi K2.5</option>
+                    <option value="kimi-k2.6">🔹 Kimi K2.6</option>
+                    <option value="kimi-k2-thinking">🔹 Kimi K2 Thinking</option>
+                    <option value="glm-4.6">🔹 GLM 4.6</option>
+                    <option value="glm-4.7">🔹 GLM 4.7</option>
+                    <option value="glm-5">🔹 GLM 5</option>
+                    <option value="glm-5.1">🔹 GLM 5.1</option>
+                    <option value="gemma3:4b">🔹 Gemma 3 (4B)</option>
+                    <option value="gemma3:12b">🔹 Gemma 3 (12B)</option>
+                    <option value="gemma3:27b">🔹 Gemma 3 (27B)</option>
+                    <option value="gemma4:31b">🔹 Gemma 4 (31B)</option>
+                    <option value="gpt-oss:20b">🔹 GPT-OSS (20B)</option>
+                    <option value="gpt-oss:120b">🔹 GPT-OSS (120B)</option>
+                    <option value="minimax-m2">🔹 MiniMax M2</option>
+                    <option value="minimax-m2.1">🔹 MiniMax M2.1</option>
+                    <option value="minimax-m2.5">🔹 MiniMax M2.5</option>
+                    <option value="minimax-m2.7">🔹 MiniMax M2.7</option>
+                    <option value="devstral-2:123b">🔹 Devstral 2 (123B)</option>
+                    <option value="devstral-small-2:24b">🔹 Devstral Small 2 (24B)</option>
+                    <option value="nemotron-3-super">🔹 Nemotron 3 Super</option>
+                    <option value="nemotron-3-nano:30b">🔹 Nemotron 3 Nano (30B)</option>
+                    <option value="cogito-2.1:671b">🔹 Cogito 2.1 (671B)</option>
+                    <option value="rnj-1:8b">🔹 RNJ-1 (8B)</option>
+                </select>
+            </div>
         </div>
+
         <div class="chat-messages" id="chatMessages">
             <div class="message bot-message">
-                Hi there! I'm Ava, now running on Gemini Flash. How can I help you today? ✨
+                Hi! I'm Ava. You can switch between 39 different AI models using the dropdown above. Try asking "Which model are you?" to see each one's personality! ✨
                 <div class="message-time">Just now</div>
             </div>
         </div>
+
         <div class="chat-input">
             <input type="text" id="userInput" placeholder="Type your message..." onkeypress="if(event.key==='Enter') sendMessage()" autocomplete="off">
             <button id="sendButton" onclick="sendMessage()">Send</button>
@@ -72,21 +138,28 @@
     </div>
 
     <script>
-        // ----- MODEL (exact cloud name after push) -----
-        const MODEL_NAME = 'gemini-3-flash-preview';
+        // ----- CURRENT MODEL -----
+        let MODEL_NAME = 'gemini-3-flash-preview';
 
         const API_URL = '/api/chat';
-       let conversationHistory = [
-    {
-        role: 'system',
-        content: 'Your name is Ava. You are a friendly, helpful AI assistant created by Muhammad Ahmad. Never say you are Gemini or trained by Google.'
-    }
-];
+        let conversationHistory = [];
         let isProcessing = false;
 
         const chatMessages = document.getElementById('chatMessages');
         const userInput = document.getElementById('userInput');
         const sendButton = document.getElementById('sendButton');
+
+        // Switch model and reset conversation
+        function switchModel(newModel) {
+            MODEL_NAME = newModel;
+            conversationHistory = [];
+            chatMessages.innerHTML = `
+                <div class="message bot-message">
+                    🔄 Switched to <strong>${newModel}</strong>. Ask me anything!
+                    <div class="message-time">${getFormattedTime()}</div>
+                </div>
+            `;
+        }
 
         function getFormattedTime() {
             return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -150,7 +223,7 @@
                 addMessage(botReply, 'bot');
                 conversationHistory.push({ role: 'assistant', content: botReply });
 
-                if (conversationHistory.length > 20) conversationHistory = conversationHistory.slice(-20);
+                if (conversationHistory.length > 30) conversationHistory = conversationHistory.slice(-30);
             } catch (error) {
                 removeTypingIndicator();
                 addMessage(`❌ Error: ${error.message}`, 'error');
