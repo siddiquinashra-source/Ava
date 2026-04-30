@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     
-    <!-- Google Identity Services -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Google Identity Services – no async/defer so it blocks and is ready when needed -->
+    <script src="https://accounts.google.com/gsi/client"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -486,8 +486,8 @@
                 <p>Sign in to continue chatting with Ava</p>
                 <div class="auth-error" id="loginError"></div>
                 
-                <!-- Google Sign-In Button -->
-                <button class="google-btn" id="googleLoginBtn" onclick="triggerGoogleSignIn()">
+                <!-- Google Sign-In Button (triggers hybrid One Tap → popup fallback) -->
+                <button class="google-btn" id="googleLoginBtn" onclick="handleGoogleSignIn()">
                     <img src="https://www.google.com/favicon.ico" alt="Google">
                     Continue with Google
                 </button>
@@ -509,8 +509,7 @@
                 <p>Join Ava and save your chats</p>
                 <div class="auth-error" id="signupError"></div>
                 
-                <!-- Google Sign-Up Button -->
-                <button class="google-btn" id="googleSignupBtn" onclick="triggerGoogleSignIn()">
+                <button class="google-btn" id="googleSignupBtn" onclick="handleGoogleSignIn()">
                     <img src="https://www.google.com/favicon.ico" alt="Google">
                     Continue with Google
                 </button>
@@ -596,6 +595,94 @@
         let conversationHistory = [];
         let isProcessing = false;
 
+        // ----- Google Sign‑In: Hybrid (One Tap → popup fallback) -----
+        function ensureGoogleReady(callback) {
+            if (typeof google !== 'undefined' && google.accounts) {
+                callback();
+            } else {
+                // Poll until Google script is available
+                const check = setInterval(() => {
+                    if (typeof google !== 'undefined' && google.accounts) {
+                        clearInterval(check);
+                        callback();
+                    }
+                }, 200);
+                // Timeout after 5 seconds
+                setTimeout(() => clearInterval(check), 5000);
+            }
+        }
+
+        function handleGoogleSignIn() {
+            ensureGoogleReady(() => {
+                // First try One Tap
+                google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: handleGoogleResponse,
+                    auto_select: false,
+                    cancel_on_tap_outside: true
+                });
+                
+                google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        // One Tap didn't work → fallback to popup
+                        const client = google.accounts.oauth2.initCodeClient({
+                            client_id: GOOGLE_CLIENT_ID,
+                            scope: 'email profile',
+                            ux_mode: 'popup',
+                            callback: (response) => {
+                                if (response.code) {
+                                    handleGoogleAuthCode(response.code);
+                                } else {
+                                    showError('login', 'Google sign‑in was cancelled. Please try again.');
+                                }
+                            }
+                        });
+                        client.requestCode();
+                    }
+                });
+            });
+        }
+
+        async function handleGoogleResponse(response) {
+            try {
+                const res = await fetch(AUTH_URL + '?action=google', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ credential: response.credential })
+                });
+                const data = await res.json();
+                if (data.user) {
+                    currentUser = data.user;
+                    localStorage.setItem('ava_session', JSON.stringify(data.session));
+                    showApp();
+                } else {
+                    showError('login', data.error || 'Google sign-in failed');
+                }
+            } catch (err) {
+                showError('login', 'Network error during Google sign‑in.');
+            }
+        }
+
+        async function handleGoogleAuthCode(code) {
+            try {
+                const res = await fetch(AUTH_URL + '?action=google-code', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+                const data = await res.json();
+                if (data.user) {
+                    currentUser = data.user;
+                    localStorage.setItem('ava_session', JSON.stringify(data.session));
+                    showApp();
+                } else {
+                    showError('login', data.error || 'Google sign-in failed');
+                }
+            } catch (err) {
+                showError('login', 'Network error during Google sign‑in.');
+            }
+        }
+
         function getUserName() {
             if (!currentUser) return 'there';
             return currentUser.name || currentUser.email?.split('@')[0] || 'there';
@@ -639,57 +726,6 @@
                 return JSON.parse(saved).access_token;
             } catch (e) { return null; }
         }
-
-        // ----- GOOGLE SIGN-IN (simplified, One Tap only) -----
-        function initGoogleSignIn() {
-            if (typeof google === 'undefined' || !google.accounts) {
-                console.warn('Google Identity Services not loaded yet');
-                return;
-            }
-            
-            google.accounts.id.initialize({
-                client_id: GOOGLE_CLIENT_ID,
-                callback: handleGoogleResponse,
-                auto_select: false,
-                cancel_on_tap_outside: true
-            });
-        }
-
-        function triggerGoogleSignIn() {
-            if (typeof google === 'undefined' || !google.accounts) {
-                showError('login', 'Google Sign-In is still loading. Please wait a moment and try again.');
-                return;
-            }
-            // Only use the One Tap / ID Token flow (no auth-code popup)
-            google.accounts.id.prompt((notification) => {
-                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                    showError('login', 'Google sign‑in was cancelled. Please try again or use email.');
-                }
-            });
-        }
-
-        async function handleGoogleResponse(response) {
-            try {
-                const res = await fetch(AUTH_URL + '?action=google', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ credential: response.credential })
-                });
-                const data = await res.json();
-                if (data.user) {
-                    currentUser = data.user;
-                    localStorage.setItem('ava_session', JSON.stringify(data.session));
-                    showApp();
-                } else {
-                    showError('login', data.error || 'Google sign-in failed');
-                }
-            } catch (err) {
-                console.error('Google sign-in error:', err);
-                showError('login', 'Google sign-in failed. Please try again.');
-            }
-        }
-
-        // (handleGoogleAuthCode removed – no longer needed)
 
         // ----- EMAIL/PASSWORD AUTH -----
         async function handleLogin() {
@@ -1000,8 +1036,6 @@
         }
 
         async function init() {
-            initGoogleSignIn();
-            
             const hasSession = await checkSession();
             if (!hasSession) {
                 document.getElementById('authScreen').style.display = 'flex';
