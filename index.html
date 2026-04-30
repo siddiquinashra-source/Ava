@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     
-    <!-- Google Identity Services – no async/defer so it blocks and is ready when needed -->
+    <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client"></script>
     
     <style>
@@ -119,9 +119,7 @@
             flex: 1;
             border-bottom: 1px solid #e2e8f0;
         }
-        .divider span {
-            padding: 0 12px;
-        }
+        .divider span { padding: 0 12px; }
 
         /* Google Button */
         .google-btn {
@@ -145,15 +143,7 @@
             box-shadow: 0 4px 15px rgba(102,126,234,0.2);
             transform: translateY(-1px);
         }
-        .google-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        .google-btn img {
-            width: 20px;
-            height: 20px;
-        }
+        .google-btn img { width: 20px; height: 20px; }
 
         /* App Layout */
         .app-layout { display: flex; height: 100vh; }
@@ -480,13 +470,11 @@
     <!-- Auth Screen -->
     <div id="authScreen" class="auth-container">
         <div class="auth-box" id="authBox">
-            <!-- Login Form -->
             <div id="loginForm">
                 <h2>✨ Welcome Back</h2>
                 <p>Sign in to continue chatting with Ava</p>
                 <div class="auth-error" id="loginError"></div>
                 
-                <!-- Google Sign-In Button (triggers hybrid One Tap → popup fallback) -->
                 <button class="google-btn" id="googleLoginBtn" onclick="handleGoogleSignIn()">
                     <img src="https://www.google.com/favicon.ico" alt="Google">
                     Continue with Google
@@ -503,7 +491,6 @@
                 </p>
             </div>
             
-            <!-- Signup Form -->
             <div id="signupForm" style="display:none;">
                 <h2>✨ Create Account</h2>
                 <p>Join Ava and save your chats</p>
@@ -595,26 +582,65 @@
         let conversationHistory = [];
         let isProcessing = false;
 
-        // ----- Google Sign‑In: Hybrid (One Tap → popup fallback) -----
+        function getUserName() {
+            if (!currentUser) return 'there';
+            return currentUser.name || currentUser.email?.split('@')[0] || 'there';
+        }
+
+        function showLogin() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('signupForm').style.display = 'none';
+            clearErrors();
+        }
+
+        function showSignup() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('signupForm').style.display = 'block';
+            clearErrors();
+        }
+
+        function clearErrors() {
+            document.getElementById('loginError').style.display = 'none';
+            document.getElementById('signupError').style.display = 'none';
+        }
+
+        function showError(type, message) {
+            const el = document.getElementById(type + 'Error');
+            el.textContent = message;
+            el.style.display = 'block';
+        }
+
+        function setLoading(btnId, loading) {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            btn.disabled = loading;
+            const defaultText = btnId === 'loginBtn' ? 'Sign In' : btnId === 'signupBtn' ? 'Create Account' : '';
+            btn.textContent = loading ? 'Please wait...' : defaultText;
+        }
+
+        function getToken() {
+            const saved = localStorage.getItem('ava_session');
+            if (!saved) return null;
+            try { return JSON.parse(saved).access_token; } catch (e) { return null; }
+        }
+
+        // ----- GOOGLE SIGN-IN -----
         function ensureGoogleReady(callback) {
             if (typeof google !== 'undefined' && google.accounts) {
                 callback();
             } else {
-                // Poll until Google script is available
                 const check = setInterval(() => {
                     if (typeof google !== 'undefined' && google.accounts) {
                         clearInterval(check);
                         callback();
                     }
                 }, 200);
-                // Timeout after 5 seconds
                 setTimeout(() => clearInterval(check), 5000);
             }
         }
 
         function handleGoogleSignIn() {
             ensureGoogleReady(() => {
-                // First try One Tap
                 google.accounts.id.initialize({
                     client_id: GOOGLE_CLIENT_ID,
                     callback: handleGoogleResponse,
@@ -624,7 +650,6 @@
                 
                 google.accounts.id.prompt((notification) => {
                     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        // One Tap didn't work → fallback to popup
                         const client = google.accounts.oauth2.initCodeClient({
                             client_id: GOOGLE_CLIENT_ID,
                             scope: 'email profile',
@@ -681,50 +706,6 @@
             } catch (err) {
                 showError('login', 'Network error during Google sign‑in.');
             }
-        }
-
-        function getUserName() {
-            if (!currentUser) return 'there';
-            return currentUser.name || currentUser.email?.split('@')[0] || 'there';
-        }
-
-        function showLogin() {
-            document.getElementById('loginForm').style.display = 'block';
-            document.getElementById('signupForm').style.display = 'none';
-            clearErrors();
-        }
-
-        function showSignup() {
-            document.getElementById('loginForm').style.display = 'none';
-            document.getElementById('signupForm').style.display = 'block';
-            clearErrors();
-        }
-
-        function clearErrors() {
-            document.getElementById('loginError').style.display = 'none';
-            document.getElementById('signupError').style.display = 'none';
-        }
-
-        function showError(type, message) {
-            const el = document.getElementById(type + 'Error');
-            el.textContent = message;
-            el.style.display = 'block';
-        }
-
-        function setLoading(btnId, loading) {
-            const btn = document.getElementById(btnId);
-            if (!btn) return;
-            btn.disabled = loading;
-            const defaultText = btnId === 'loginBtn' ? 'Sign In' : btnId === 'signupBtn' ? 'Create Account' : '';
-            btn.textContent = loading ? 'Please wait...' : defaultText;
-        }
-
-        function getToken() {
-            const saved = localStorage.getItem('ava_session');
-            if (!saved) return null;
-            try {
-                return JSON.parse(saved).access_token;
-            } catch (e) { return null; }
         }
 
         // ----- EMAIL/PASSWORD AUTH -----
@@ -999,8 +980,8 @@
 
             try {
                 let result;
-                const modelsToTry = [MODEL_NAME, ...(MODEL_NAME !== FALLBACK_MODEL ? [FALLBACK_MODEL] : []), 'gemma3:4b'];
-                for (const model of modelsToTry) {
+                const modelsToTry = [MODEL_NAME, FALLBACK_MODEL, 'gemma3:4b'];
+                for (const model of [...new Set(modelsToTry)]) {
                     try {
                         const response = await fetch(API_URL, {
                             method: 'POST',
