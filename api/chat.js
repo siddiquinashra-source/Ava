@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 
-const sql = neon('postgresql://neondb_owner:npg_RKe0bD6jwSrh@ep-quiet-cherry-a45jj9ee.us-east-1.aws.neon.tech/neondb?sslmode=require');
-const OLLAMA_API_KEY = 'fd6bfc3a5e534979a562387474fff219.XWr5VBH7jhPIdBeYkljTINc1';
+const sql = neon(process.env.NEON_DATABASE_URL || 'postgresql://neondb_owner:npg_RKe0bD6jwSrh@ep-quiet-cherry-a45jj9ee.us-east-1.aws.neon.tech/neondb?sslmode=require');
+const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || 'fd6bfc3a5e534979a562387474fff219.XWr5VBH7jhPIdBeYkljTINc1';
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -13,7 +13,6 @@ export default async function handler(req, res) {
         return;
     }
 
-    // Parse action from query string
     const url = new URL(req.url, 'http://localhost');
     const action = url.searchParams.get('action') || '';
 
@@ -59,17 +58,15 @@ export default async function handler(req, res) {
         }
 
         try {
-            // Delete messages first, then conversation
             await sql`DELETE FROM messages WHERE conversation_id = ${conversationId}`;
             await sql`DELETE FROM conversations WHERE id = ${conversationId} AND user_id = ${userId}`;
-            
             return res.status(200).json({ success: true });
         } catch (error) {
             return res.status(500).json({ error: error.message });
         }
     }
 
-    // ----- POST: Chat + Save -----
+    // ----- POST: Chat + Save (with streaming!) -----
     if (req.method === 'POST' && action !== 'delete') {
         const { model, messages, userId, conversationId } = req.body;
 
@@ -78,8 +75,7 @@ export default async function handler(req, res) {
         }
 
         try {
-            console.log('Calling Ollama with model:', model);
-            
+            // Call Ollama API with stream: true
             const response = await fetch('https://api.ollama.com/api/chat', {
                 method: 'POST',
                 headers: {
@@ -89,25 +85,53 @@ export default async function handler(req, res) {
                 body: JSON.stringify({
                     model: model,
                     messages: messages,
-                    stream: false
+                    stream: true  // <-- Enable streaming!
                 })
             });
 
             if (!response.ok) {
                 const errText = await response.text();
-                console.error('Ollama error:', errText);
                 return res.status(response.status).json({ error: errText });
             }
 
-            const data = await response.json();
-            const botReply = data.message?.content || data.response;
-            
-            console.log('Got reply, length:', botReply?.length);
+            // Set up streaming response to the client
+            res.setHeader('Content-Type', 'text/event-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.setHeader('Connection', 'keep-alive');
 
-            let convId = conversationId;
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullResponse = '';
+
+            // Stream tokens to the client
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n').filter(line => line.trim());
+
+                for (const line of lines) {
+                    try {
+                        const data = JSON.parse(line);
+                        if (data.message?.content) {
+                            const token = data.message.content;
+                            fullResponse += token;
+                            // Send token to client
+                            res.write(`data: ${JSON.stringify({ token, done: false })}\n\n`);
+                        }
+                        if (data.done) {
+                            res.write(`data: ${JSON.stringify({ token: '', done: true, conversationId: null })}\n\n`);
+                        }
+                    } catch (e) {
+                        // Skip non-JSON lines
+                    }
+                }
+            }
 
             // Save to database if user is logged in
-            if (userId && botReply) {
+            let convId = conversationId;
+            if (userId && fullResponse) {
                 if (!convId) {
                     const lastMsg = messages[messages.length - 1];
                     const title = lastMsg?.content?.substring(0, 100) || 'New Chat';
@@ -126,23 +150,20 @@ export default async function handler(req, res) {
                 `;
                 await sql`
                     INSERT INTO messages (conversation_id, role, content, model)
-                    VALUES (${convId}, 'assistant', ${botReply}, ${model})
+                    VALUES (${convId}, 'assistant', ${fullResponse}, ${model})
                 `;
                 await sql`
                     UPDATE conversations SET updated_at = NOW()
                     WHERE id = ${convId}
                 `;
 
-                return res.status(200).json({
-                    message: { content: botReply },
-                    conversationId: convId
-                });
+                // Send final message with conversationId
+                res.write(`data: ${JSON.stringify({ token: '', done: true, conversationId: convId })}\n\n`);
+            } else {
+                res.write(`data: ${JSON.stringify({ token: '', done: true })}\n\n`);
             }
 
-            // Not logged in — just return the reply
-            return res.status(200).json({
-                message: { content: botReply }
-            });
+            res.end();
 
         } catch (error) {
             console.error('Fatal error:', error);
