@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     
-    <!-- Google Identity Services -->
+    <!-- Google Identity Services – no async/defer so it blocks and is ready when needed -->
     <script src="https://accounts.google.com/gsi/client"></script>
     
     <style>
@@ -365,22 +365,6 @@
             0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
             30% { transform: translateY(-12px); opacity: 1; }
         }
-        
-        /* Cursor for typing effect */
-        .typing-cursor {
-            display: inline-block;
-            width: 2px;
-            height: 1em;
-            background: #667eea;
-            margin-left: 2px;
-            animation: blink 1s infinite;
-            vertical-align: text-bottom;
-        }
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0; }
-        }
-
         .chat-input {
             padding: 22px 24px;
             background: white;
@@ -496,11 +480,13 @@
     <!-- Auth Screen -->
     <div id="authScreen" class="auth-container">
         <div class="auth-box" id="authBox">
+            <!-- Login Form -->
             <div id="loginForm">
                 <h2>✨ Welcome Back</h2>
                 <p>Sign in to continue chatting with Ava</p>
                 <div class="auth-error" id="loginError"></div>
                 
+                <!-- Google Sign-In Button (triggers hybrid One Tap → popup fallback) -->
                 <button class="google-btn" id="googleLoginBtn" onclick="handleGoogleSignIn()">
                     <img src="https://www.google.com/favicon.ico" alt="Google">
                     Continue with Google
@@ -517,6 +503,7 @@
                 </p>
             </div>
             
+            <!-- Signup Form -->
             <div id="signupForm" style="display:none;">
                 <h2>✨ Create Account</h2>
                 <p>Join Ava and save your chats</p>
@@ -607,25 +594,27 @@
         let currentConversationId = null;
         let conversationHistory = [];
         let isProcessing = false;
-        let typingAnimationId = null; // Track animation frame for cancellation
 
-        // ----- Google Sign‑In -----
+        // ----- Google Sign‑In: Hybrid (One Tap → popup fallback) -----
         function ensureGoogleReady(callback) {
             if (typeof google !== 'undefined' && google.accounts) {
                 callback();
             } else {
+                // Poll until Google script is available
                 const check = setInterval(() => {
                     if (typeof google !== 'undefined' && google.accounts) {
                         clearInterval(check);
                         callback();
                     }
                 }, 200);
+                // Timeout after 5 seconds
                 setTimeout(() => clearInterval(check), 5000);
             }
         }
 
         function handleGoogleSignIn() {
             ensureGoogleReady(() => {
+                // First try One Tap
                 google.accounts.id.initialize({
                     client_id: GOOGLE_CLIENT_ID,
                     callback: handleGoogleResponse,
@@ -635,6 +624,7 @@
                 
                 google.accounts.id.prompt((notification) => {
                     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        // One Tap didn't work → fallback to popup
                         const client = google.accounts.oauth2.initCodeClient({
                             client_id: GOOGLE_CLIENT_ID,
                             scope: 'email profile',
@@ -906,8 +896,7 @@
                 conversationHistory = [];
                 if (data.messages) {
                     data.messages.forEach(msg => {
-                        // For previously saved messages, just display them (no typing animation for history)
-                        addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', new Date(msg.created_at), true);
+                        addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', new Date(msg.created_at));
                         conversationHistory.push({ role: msg.role, content: msg.content });
                     });
                 }
@@ -960,80 +949,21 @@
             });
         }
 
-        function highlightAllCode(container) {
-            container.querySelectorAll('pre code').forEach(block => {
-                hljs.highlightElement(block);
-            });
-        }
-
-        // ----- TYPING EFFECT -----
-        function typeMessage(div, fullText, time, callback) {
-            let index = 0;
-            const speed = 15; // milliseconds per character
-            const messageContent = div; // the div itself is the message
-
-            // Clear existing content
-            messageContent.innerHTML = '';
-
-            // Create a span for the text
-            const textSpan = document.createElement('span');
-            messageContent.appendChild(textSpan);
-
-            // Add cursor
-            const cursor = document.createElement('span');
-            cursor.className = 'typing-cursor';
-            messageContent.appendChild(cursor);
-
-            function type() {
-                if (index < fullText.length) {
-                    textSpan.textContent += fullText[index];
-                    index++;
-                    document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
-                    typingAnimationId = setTimeout(type, speed);
-                } else {
-                    // Remove cursor
-                    cursor.remove();
-                    // Add timestamp
-                    const timeDiv = document.createElement('div');
-                    timeDiv.className = 'message-time';
-                    timeDiv.textContent = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    messageContent.appendChild(timeDiv);
-                    // Apply code highlighting and copy buttons
-                    highlightAllCode(messageContent);
-                    addCopyButtons();
-                    if (callback) callback();
-                }
-            }
-
-            typingAnimationId = setTimeout(type, speed);
-        }
-
-        function addMessage(content, type, time = new Date(), skipAnimation = false) {
+        function addMessage(content, type, time = new Date()) {
             const div = document.createElement('div');
             div.className = `message ${type}-message`;
+            let processed = content
+                .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => 
+                    `<pre><code class="language-${lang || 'plaintext'}">${escapeHtml(code.trim())}</code></pre>`)
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/\n/g, '<br>');
             
-            if (type === 'bot' && !skipAnimation) {
-                // Use typing animation for bot messages
-                document.getElementById('chatMessages').appendChild(div);
-                document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
-                typeMessage(div, content, time, () => {
-                    // Animation complete
-                });
-            } else {
-                // User message or history: display immediately
-                let processed = content
-                    .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => 
-                        `<pre><code class="language-${lang || 'plaintext'}">${escapeHtml(code.trim())}</code></pre>`)
-                    .replace(/`([^`]+)`/g, '<code>$1</code>')
-                    .replace(/\n/g, '<br>');
-                
-                div.innerHTML = processed + `<div class="message-time">${time.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}</div>`;
-                document.getElementById('chatMessages').appendChild(div);
-                highlightAllCode(div);
-                addCopyButtons();
-                document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
-            }
-            return div;
+            div.innerHTML = processed + `<div class="message-time">${time.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })}</div>`;
+            document.getElementById('chatMessages').appendChild(div);
+            
+            div.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+            addCopyButtons();
+            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
         }
 
         function showTyping() {
@@ -1046,8 +976,7 @@
         }
 
         function hideTyping() {
-            const indicator = document.getElementById('typingIndicator');
-            if (indicator) indicator.remove();
+            document.getElementById('typingIndicator')?.remove();
         }
 
         async function sendMessage() {
@@ -1090,8 +1019,7 @@
                 hideTyping();
                 if (!result) throw new Error('All models down');
                 const botReply = result.message?.content || "Sorry, couldn't respond.";
-                // Add the bot message with typing animation
-                addMessage(botReply, 'bot', new Date(), false);
+                addMessage(botReply, 'bot');
                 conversationHistory.push({ role: 'assistant', content: botReply });
                 if (result.conversationId && !currentConversationId) {
                     currentConversationId = result.conversationId;
