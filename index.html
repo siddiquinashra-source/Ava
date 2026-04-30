@@ -640,7 +640,7 @@
             } catch (e) { return null; }
         }
 
-        // ----- GOOGLE SIGN-IN -----
+        // ----- GOOGLE SIGN-IN (simplified, One Tap only) -----
         function initGoogleSignIn() {
             if (typeof google === 'undefined' || !google.accounts) {
                 console.warn('Google Identity Services not loaded yet');
@@ -653,35 +653,17 @@
                 auto_select: false,
                 cancel_on_tap_outside: true
             });
-            
-            // Also render the official button (hidden) for One Tap
-            google.accounts.id.renderButton(
-                document.createElement('div'),
-                { theme: 'outline', size: 'large' }
-            );
         }
 
         function triggerGoogleSignIn() {
             if (typeof google === 'undefined' || !google.accounts) {
-                showError('login', 'Google Sign-In is loading. Please try again.');
+                showError('login', 'Google Sign-In is still loading. Please wait a moment and try again.');
                 return;
             }
-            // Use the Google One Tap prompt
+            // Only use the One Tap / ID Token flow (no auth-code popup)
             google.accounts.id.prompt((notification) => {
                 if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                    // If One Tap doesn't work, fall back to the standard flow
-                    const client = google.accounts.oauth2.initCodeClient({
-                        client_id: GOOGLE_CLIENT_ID,
-                        scope: 'email profile',
-                        ux_mode: 'popup',
-                        callback: (response) => {
-                            if (response.code) {
-                                // Send auth code to backend
-                                handleGoogleAuthCode(response.code);
-                            }
-                        }
-                    });
-                    client.requestCode();
+                    showError('login', 'Google sign‑in was cancelled. Please try again or use email.');
                 }
             });
         }
@@ -707,26 +689,7 @@
             }
         }
 
-        async function handleGoogleAuthCode(code) {
-            try {
-                const res = await fetch(AUTH_URL + '?action=google-code', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code })
-                });
-                const data = await res.json();
-                if (data.user) {
-                    currentUser = data.user;
-                    localStorage.setItem('ava_session', JSON.stringify(data.session));
-                    showApp();
-                } else {
-                    showError('login', data.error || 'Google sign-in failed');
-                }
-            } catch (err) {
-                console.error('Google auth code error:', err);
-                showError('login', 'Google sign-in failed. Please try again.');
-            }
-        }
+        // (handleGoogleAuthCode removed – no longer needed)
 
         // ----- EMAIL/PASSWORD AUTH -----
         async function handleLogin() {
@@ -784,7 +747,6 @@
                         headers: { 'Authorization': `Bearer ${token}` } 
                     }); 
                 } catch(e) {}
-                // Also disable Google auto sign-in
                 if (typeof google !== 'undefined' && google.accounts) {
                     google.accounts.id.disableAutoSelect();
                 }
@@ -1038,7 +1000,6 @@
         }
 
         async function init() {
-            // Initialize Google Sign-In
             initGoogleSignIn();
             
             const hasSession = await checkSession();
