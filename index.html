@@ -49,7 +49,6 @@
             line-height: 1.6;
         }
 
-        /* Auth */
         .auth-container { height: 100vh; display: flex; justify-content: center; align-items: center; }
         .auth-box {
             background: var(--bg-card);
@@ -100,7 +99,6 @@
         .google-btn:hover { border-color: var(--accent); box-shadow: var(--shadow-md); }
         .google-btn img { width: 18px; height: 18px; }
 
-        /* App Layout */
         .app-layout { display: flex; height: 100vh; }
         .sidebar {
             width: 280px; background: var(--bg-secondary); color: var(--text-light);
@@ -146,7 +144,6 @@
         }
         .sign-out-btn:hover { background: rgba(255,255,255,0.1); color: white; }
 
-        /* Chat Area */
         .chat-container { flex: 1; display: flex; flex-direction: column; background: var(--bg-card); }
         .chat-header {
             background: var(--bg-secondary); color: white;
@@ -232,9 +229,7 @@
         }
         
         .chat-input-area { padding: 18px 24px; background: white; border-top: 1px solid var(--border); }
-        .chat-input {
-            display: flex; gap: 10px; align-items: center;
-        }
+        .chat-input { display: flex; gap: 10px; align-items: center; }
         .chat-input input[type="text"] {
             flex: 1; padding: 13px 20px; border: 1.5px solid var(--border);
             border-radius: var(--radius-full); font-size: 15px; outline: none;
@@ -260,7 +255,6 @@
         .message-time { font-size: 11px; margin-top: 8px; opacity: 0.55; font-weight: 400; letter-spacing: 0.2px; }
         .user-message .message-time { text-align: right; opacity: 0.7; }
 
-        /* Code Blocks */
         .message pre {
             background: #1a1b26;
             border-radius: var(--radius-md);
@@ -378,8 +372,6 @@
                             <option value="kimi-k2-thinking">Kimi K2 Thinking</option>
                             <option value="mistral-large-3:675b">Mistral Large 3</option>
                             <option value="glm-5.1">GLM 5.1</option>
-                            <option value="gpt-oss:20b">GPT-OSS (20B)</option>
-                            <option value="nemotron-3-super">Nemotron 3 Super</option>
                         </select>
                     </div>
                 </div>
@@ -421,6 +413,7 @@
         let selectedFiles = [];
         let imageMode = false;
         let previousModel = 'gemini-3-flash-preview';
+        let gisInitialized = false;
 
         function toggleImageMode() {
             imageMode = !imageMode;
@@ -469,7 +462,7 @@
                 item.className = 'file-preview-item';
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    item.innerHTML = `<img src="${e.target.result}" alt="Preview"><span>${file.name}</span><button class="remove-file-btn" onclick="removeFile()">&times;</button></div>`;
+                    item.innerHTML = `<img src="${e.target.result}" alt="Preview"><span>${file.name}</span><button class="remove-file-btn" onclick="removeFile()">&times;</button>`;
                 };
                 reader.readAsDataURL(file);
                 preview.appendChild(item);
@@ -477,7 +470,6 @@
         }
         function removeFile() { selectedFiles = []; document.getElementById('filePreview').innerHTML = ''; document.getElementById('filePreviewBar').classList.remove('show'); }
 
-        // Auth functions (unchanged)
         function getUserName() { if(!currentUser) return 'there'; return currentUser.name || currentUser.email?.split('@')[0] || 'there'; }
         function showLogin() { document.getElementById('loginForm').style.display='block'; document.getElementById('signupForm').style.display='none'; clearErrors(); }
         function showSignup() { document.getElementById('loginForm').style.display='none'; document.getElementById('signupForm').style.display='block'; clearErrors(); }
@@ -485,31 +477,252 @@
         function showError(type, message) { const el = document.getElementById(type+'Error'); el.textContent=message; el.style.display='block'; }
         function setLoading(btnId, loading) { const btn=document.getElementById(btnId); if(!btn) return; btn.disabled=loading; btn.textContent=loading?'Please wait...':(btnId==='loginBtn'?'Sign In':'Create Account'); }
         function getToken() { const saved=localStorage.getItem('ava_session'); if(!saved) return null; try{return JSON.parse(saved).access_token;}catch(e){return null;} }
-        function ensureGoogleReady(callback){if(typeof google!=='undefined'&&google.accounts){callback();}else{const check=setInterval(()=>{if(typeof google!=='undefined'&&google.accounts){clearInterval(check);callback();}},200);setTimeout(()=>clearInterval(check),5000);}}
-        function handleGoogleSignIn(){ensureGoogleReady(()=>{google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:handleGoogleResponse,auto_select:false,cancel_on_tap_outside:true});google.accounts.id.prompt((notification)=>{if(notification.isNotDisplayed()||notification.isSkippedMoment()){const client=google.accounts.oauth2.initCodeClient({client_id:GOOGLE_CLIENT_ID,scope:'email profile',ux_mode:'popup',callback:(response)=>{if(response.code){handleGoogleAuthCode(response.code);}else{showError('login','Sign‑in cancelled.');}}});client.requestCode();}});});}
-        async function handleGoogleResponse(response){try{const res=await fetch(AUTH_URL+'?action=google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:response.credential})});const data=await res.json();if(data.user){currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}else{showError('login',data.error||'Google sign-in failed');}}catch(err){showError('login','Network error.');}}
-        async function handleGoogleAuthCode(code){try{const res=await fetch(AUTH_URL+'?action=google-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});const data=await res.json();if(data.user){currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}else{showError('login',data.error||'Google sign-in failed');}}catch(err){showError('login','Network error.');}}
-        async function handleLogin(){const email=document.getElementById('loginEmail').value.trim();const password=document.getElementById('loginPassword').value;if(!email||!password){showError('login','Please fill in all fields');return;}setLoading('loginBtn',true);clearErrors();try{const response=await fetch(AUTH_URL+'?action=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});const data=await response.json();if(!response.ok)throw new Error(data.error||'Invalid email or password');currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}catch(error){showError('login',error.message);}finally{setLoading('loginBtn',false);}}
-        async function handleSignup(){const name=document.getElementById('signupName').value.trim();const email=document.getElementById('signupEmail').value.trim();const password=document.getElementById('signupPassword').value;if(!name||!email||!password){showError('signup','Please fill in all fields');return;}if(password.length<8){showError('signup','Password must be at least 8 characters');return;}setLoading('signupBtn',true);clearErrors();try{const response=await fetch(AUTH_URL+'?action=signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password})});const data=await response.json();if(!response.ok)throw new Error(data.error||'Signup failed');currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}catch(error){showError('signup',error.message);}finally{setLoading('signupBtn',false);}}
-        async function handleSignOut(){const token=getToken();if(token){try{await fetch(AUTH_URL+'?action=logout',{method:'POST',headers:{'Authorization':`Bearer ${token}`}});}catch(e){}if(typeof google!=='undefined'&&google.accounts){google.accounts.id.disableAutoSelect();}}currentUser=null;currentConversationId=null;conversationHistory=[];localStorage.removeItem('ava_session');document.getElementById('authScreen').style.display='flex';document.getElementById('appScreen').style.display='none';document.getElementById('loginEmail').value='';document.getElementById('loginPassword').value='';showLogin();}
-        async function checkSession(){const saved=localStorage.getItem('ava_session');if(!saved)return false;try{const session=JSON.parse(saved);const response=await fetch(AUTH_URL+'?action=verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({access_token:session.access_token})});const data=await response.json();if(data.user){currentUser=data.user;showApp();return true;}}catch(e){localStorage.removeItem('ava_session');}return false;}
-        function showApp(){document.getElementById('authScreen').style.display='none';document.getElementById('appScreen').style.display='flex';const name=getUserName();document.getElementById('userName').textContent=name;document.getElementById('userAvatar').textContent=name.charAt(0).toUpperCase();document.getElementById('chatMessages').innerHTML=`<div class="message bot-message">Welcome back, ${escapeHtml(name)}. How can I help you today?<div class="message-time">${getFormattedTime()}</div></div>`;conversationHistory=[];currentConversationId=null;loadConversations();}
 
-        async function loadConversations(){if(!currentUser)return;try{const response=await fetch(API_URL,{method:'GET',headers:{'x-user-id':currentUser.id,'Authorization':'Bearer '+getToken()}});const data=await response.json();const list=document.getElementById('conversationsList');if(data.conversations&&data.conversations.length>0){list.innerHTML=data.conversations.map(conv=>`<div class="conversation-item ${conv.id===currentConversationId?'active':''}"><span class="conversation-title" onclick="loadConversation('${conv.id}')">${escapeHtml(conv.title||'Untitled')}</span><button class="delete-chat-btn" onclick="deleteConversation(event,'${conv.id}')" title="Delete">x</button></div>`).join('');}else{list.innerHTML='<p style="color:var(--text-muted);text-align:center;margin-top:24px;font-size:13px;">No conversations yet</p>';}}catch(e){console.error(e);}}
-        async function deleteConversation(event,convId){event.stopPropagation();if(!confirm('Delete this conversation? This cannot be undone.'))return;try{const response=await fetch(API_URL+'?action=delete',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+getToken(),'x-user-id':currentUser.id},body:JSON.stringify({conversationId:convId})});if(response.ok){if(currentConversationId===convId)newChat();loadConversations();}}catch(e){console.error(e);}}
-        async function loadConversation(convId){if(!currentUser)return;try{const response=await fetch(API_URL,{method:'GET',headers:{'x-user-id':currentUser.id,'x-conversation-id':convId,'Authorization':'Bearer '+getToken()}});const data=await response.json();currentConversationId=convId;const chatMessages=document.getElementById('chatMessages');chatMessages.innerHTML='';conversationHistory=[];if(data.messages){data.messages.forEach(msg=>{addMessage(msg.content,msg.role==='user'?'user':'bot',new Date(msg.created_at));conversationHistory.push({role:msg.role,content:msg.content});});}loadConversations();chatMessages.scrollTop=chatMessages.scrollHeight;}catch(e){console.error(e);}}
-        function newChat(){currentConversationId=null;conversationHistory=[];const name=getUserName();document.getElementById('chatMessages').innerHTML=`<div class="message bot-message">New conversation started. What can I help with?<div class="message-time">${getFormattedTime()}</div></div>`;loadConversations();}
+        function ensureGoogleReady(callback){
+            if(typeof google!=='undefined'&&google.accounts){callback();}
+            else{const check=setInterval(()=>{if(typeof google!=='undefined'&&google.accounts){clearInterval(check);callback();}},200);setTimeout(()=>clearInterval(check),5000);}
+        }
+
+        function handleGoogleSignIn(){
+            ensureGoogleReady(()=>{
+                if(!gisInitialized){
+                    google.accounts.id.initialize({
+                        client_id:GOOGLE_CLIENT_ID,
+                        callback:handleGoogleResponse,
+                        auto_select:false,
+                        cancel_on_tap_outside:true,
+                        use_fedcm_for_prompt:true
+                    });
+                    gisInitialized=true;
+                }
+                google.accounts.id.prompt((notification)=>{
+                    if(notification.isNotDisplayed()||notification.isSkippedMoment()){
+                        const client=google.accounts.oauth2.initCodeClient({
+                            client_id:GOOGLE_CLIENT_ID,
+                            scope:'email profile',
+                            ux_mode:'popup',
+                            callback:(response)=>{
+                                if(response.code){handleGoogleAuthCode(response.code);}
+                                else{showError('login','Sign-in cancelled.');}
+                            }
+                        });
+                        client.requestCode();
+                    }
+                });
+            });
+        }
+
+        async function handleGoogleResponse(response){
+            try{
+                const res=await fetch(AUTH_URL+'?action=google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:response.credential})});
+                const data=await res.json();
+                if(data.user){currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}
+                else{showError('login',data.error||'Google sign-in failed');}
+            }catch(err){showError('login','Network error.');}
+        }
+
+        async function handleGoogleAuthCode(code){
+            try{
+                const res=await fetch(AUTH_URL+'?action=google-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+                const data=await res.json();
+                if(data.user){currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}
+                else{showError('login',data.error||'Google sign-in failed');}
+            }catch(err){showError('login','Network error.');}
+        }
+
+        async function handleLogin(){
+            const email=document.getElementById('loginEmail').value.trim();
+            const password=document.getElementById('loginPassword').value;
+            if(!email||!password){showError('login','Please fill in all fields');return;}
+            setLoading('loginBtn',true);clearErrors();
+            try{
+                const response=await fetch(AUTH_URL+'?action=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+                const data=await response.json();
+                if(!response.ok)throw new Error(data.error||'Invalid email or password');
+                currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();
+            }catch(error){showError('login',error.message);}
+            finally{setLoading('loginBtn',false);}
+        }
+
+        async function handleSignup(){
+            const name=document.getElementById('signupName').value.trim();
+            const email=document.getElementById('signupEmail').value.trim();
+            const password=document.getElementById('signupPassword').value;
+            if(!name||!email||!password){showError('signup','Please fill in all fields');return;}
+            if(password.length<8){showError('signup','Password must be at least 8 characters');return;}
+            setLoading('signupBtn',true);clearErrors();
+            try{
+                const response=await fetch(AUTH_URL+'?action=signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password})});
+                const data=await response.json();
+                if(!response.ok)throw new Error(data.error||'Signup failed');
+                currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();
+            }catch(error){showError('signup',error.message);}
+            finally{setLoading('signupBtn',false);}
+        }
+
+        async function handleSignOut(){
+            const token=getToken();
+            if(token){try{await fetch(AUTH_URL+'?action=logout',{method:'POST',headers:{'Authorization':`Bearer ${token}`}});}catch(e){}}
+            currentUser=null;currentConversationId=null;conversationHistory=[];
+            localStorage.removeItem('ava_session');
+            gisInitialized=false;
+            document.getElementById('authScreen').style.display='flex';
+            document.getElementById('appScreen').style.display='none';
+            document.getElementById('loginEmail').value='';document.getElementById('loginPassword').value='';
+            showLogin();
+        }
+
+        async function checkSession(){
+            const saved=localStorage.getItem('ava_session');
+            if(!saved)return false;
+            try{
+                const session=JSON.parse(saved);
+                const response=await fetch(AUTH_URL+'?action=verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({access_token:session.access_token})});
+                const data=await response.json();
+                if(data.user){currentUser=data.user;showApp();return true;}
+            }catch(e){localStorage.removeItem('ava_session');}
+            return false;
+        }
+
+        function showApp(){
+            document.getElementById('authScreen').style.display='none';
+            document.getElementById('appScreen').style.display='flex';
+            const name=getUserName();
+            document.getElementById('userName').textContent=name;
+            document.getElementById('userAvatar').textContent=name.charAt(0).toUpperCase();
+            document.getElementById('chatMessages').innerHTML=`<div class="message bot-message">Welcome back, ${escapeHtml(name)}. How can I help you today?<div class="message-time">${getFormattedTime()}</div></div>`;
+            conversationHistory=[];currentConversationId=null;
+            loadConversations();
+        }
+
+        async function loadConversations(){
+            if(!currentUser)return;
+            try{
+                const response=await fetch(API_URL,{method:'GET',headers:{'x-user-id':currentUser.id,'Authorization':'Bearer '+getToken()}});
+                const data=await response.json();
+                const list=document.getElementById('conversationsList');
+                if(data.conversations&&data.conversations.length>0){
+                    list.innerHTML=data.conversations.map(conv=>`<div class="conversation-item ${conv.id===currentConversationId?'active':''}"><span class="conversation-title" onclick="loadConversation('${conv.id}')">${escapeHtml(conv.title||'Untitled')}</span><button class="delete-chat-btn" onclick="deleteConversation(event,'${conv.id}')" title="Delete">x</button></div>`).join('');
+                }else{
+                    list.innerHTML='<p style="color:var(--text-muted);text-align:center;margin-top:24px;font-size:13px;">No conversations yet</p>';
+                }
+            }catch(e){console.error(e);}
+        }
+
+        async function deleteConversation(event,convId){
+            event.stopPropagation();
+            if(!confirm('Delete this conversation? This cannot be undone.'))return;
+            try{
+                const response=await fetch(API_URL+'?action=delete',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+getToken(),'x-user-id':currentUser.id},body:JSON.stringify({conversationId:convId})});
+                if(response.ok){if(currentConversationId===convId)newChat();loadConversations();}
+            }catch(e){console.error(e);}
+        }
+
+        async function loadConversation(convId){
+            if(!currentUser)return;
+            try{
+                const response=await fetch(API_URL,{method:'GET',headers:{'x-user-id':currentUser.id,'x-conversation-id':convId,'Authorization':'Bearer '+getToken()}});
+                const data=await response.json();
+                currentConversationId=convId;
+                const chatMessages=document.getElementById('chatMessages');
+                chatMessages.innerHTML='';conversationHistory=[];
+                if(data.messages){data.messages.forEach(msg=>{addMessage(msg.content,msg.role==='user'?'user':'bot',new Date(msg.created_at));conversationHistory.push({role:msg.role,content:msg.content});});}
+                loadConversations();chatMessages.scrollTop=chatMessages.scrollHeight;
+            }catch(e){console.error(e);}
+        }
+
+        function newChat(){
+            currentConversationId=null;conversationHistory=[];
+            document.getElementById('chatMessages').innerHTML=`<div class="message bot-message">New conversation started. What can I help with?<div class="message-time">${getFormattedTime()}</div></div>`;
+            loadConversations();
+        }
+
         function getFormattedTime(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
         function escapeHtml(text){if(!text)return'';const div=document.createElement('div');div.textContent=text;return div.innerHTML;}
 
-        function addCopyButtons(){document.querySelectorAll('.message pre').forEach(pre=>{if(pre.querySelector('.code-header'))return;const header=document.createElement('div');header.className='code-header';const lang=pre.querySelector('code')?.className?.replace('language-','')||'code';header.innerHTML=`<span>${lang}</span>`;const copyBtn=document.createElement('button');copyBtn.className='copy-btn';copyBtn.textContent='Copy';copyBtn.onclick=()=>{const code=pre.querySelector('code').textContent;navigator.clipboard.writeText(code).then(()=>{copyBtn.textContent='Copied!';setTimeout(()=>copyBtn.textContent='Copy',2000);});};header.appendChild(copyBtn);pre.insertBefore(header,pre.firstChild);});}
-        function addMessage(content,type,time=new Date()){const div=document.createElement('div');div.className=`message ${type}-message`;let processed=content.replace(/```(\w+)?\n([\s\S]*?)```/g,(_,lang,code)=>`<pre><code class="language-${lang||'plaintext'}">${escapeHtml(code.trim())}</code></pre>`).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br>');div.innerHTML=processed+`<div class="message-time">${time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>`;document.getElementById('chatMessages').appendChild(div);div.querySelectorAll('pre code').forEach(block=>hljs.highlightElement(block));addCopyButtons();document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight;}
-        function showTyping(){const div=document.createElement('div');div.className='typing-indicator';div.id='typingIndicator';div.innerHTML='<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';document.getElementById('chatMessages').appendChild(div);document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight;}
+        function addCopyButtons(){
+            document.querySelectorAll('.message pre').forEach(pre=>{
+                if(pre.querySelector('.code-header'))return;
+                const header=document.createElement('div');header.className='code-header';
+                const lang=pre.querySelector('code')?.className?.replace('language-','')||'code';
+                header.innerHTML=`<span>${lang}</span>`;
+                const copyBtn=document.createElement('button');copyBtn.className='copy-btn';copyBtn.textContent='Copy';
+                copyBtn.onclick=()=>{const code=pre.querySelector('code').textContent;navigator.clipboard.writeText(code).then(()=>{copyBtn.textContent='Copied!';setTimeout(()=>copyBtn.textContent='Copy',2000);});};
+                header.appendChild(copyBtn);pre.insertBefore(header,pre.firstChild);
+            });
+        }
+
+        function addMessage(content,type,time=new Date()){
+            const div=document.createElement('div');div.className=`message ${type}-message`;
+            let processed=content.replace(/```(\w+)?\n([\s\S]*?)```/g,(_,lang,code)=>`<pre><code class="language-${lang||'plaintext'}">${escapeHtml(code.trim())}</code></pre>`).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br>');
+            div.innerHTML=processed+`<div class="message-time">${time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>`;
+            document.getElementById('chatMessages').appendChild(div);
+            div.querySelectorAll('pre code').forEach(block=>hljs.highlightElement(block));
+            addCopyButtons();
+            document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight;
+        }
+
+        function showTyping(){
+            const div=document.createElement('div');div.className='typing-indicator';div.id='typingIndicator';
+            div.innerHTML='<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+            document.getElementById('chatMessages').appendChild(div);
+            document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight;
+        }
+
         function hideTyping(){document.getElementById('typingIndicator')?.remove();}
 
-        async function sendMessage(){const message=document.getElementById('userInput').value.trim();if(!message||isProcessing)return;document.getElementById('userInput').value='';isProcessing=true;document.getElementById('sendButton').disabled=true;if(selectedFiles.length>0&&selectedFiles[0].type.startsWith('image/')){const reader=new FileReader();reader.onload=(e)=>{const div=document.createElement('div');div.className='message user-message';div.innerHTML=`<img src="${e.target.result}" class="uploaded-image">${message?'<br>'+escapeHtml(message):''}<div class="message-time">${getFormattedTime()}</div>`;document.getElementById('chatMessages').appendChild(div);document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight;};reader.readAsDataURL(selectedFiles[0]);await new Promise(r=>setTimeout(r,100));}else{addMessage(message,'user');}conversationHistory.push({role:'user',content:message});showTyping();try{let result;const modelsToTry=[...new Set([MODEL_NAME,FALLBACK_MODEL,'gemma3:4b'])];for(const model of modelsToTry){try{const body={model,messages:conversationHistory,userId:currentUser?.id||null,conversationId:currentConversationId};if(imageMode&&selectedFiles.length>0){const file=selectedFiles[0];const base64=await new Promise((resolve)=>{const reader=new FileReader();reader.onload=(e)=>resolve(e.target.result.split(',')[1]);reader.readAsDataURL(file);});body.messages[body.messages.length-1].images=[base64];}const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+getToken()},body:JSON.stringify(body)});if(response.ok){result=await response.json();if(model!==MODEL_NAME){result.message.content=`Using ${model} (fallback):\n\n${result.message.content}`;}break;}}catch(e){continue;}}hideTyping();if(!result)throw new Error('All models down');const botReply=result.message?.content||"Sorry, couldn't respond.";addMessage(botReply,'bot');conversationHistory.push({role:'assistant',content:botReply});if(result.conversationId&&!currentConversationId){currentConversationId=result.conversationId;loadConversations();}selectedFiles=[];document.getElementById('filePreview').innerHTML='';document.getElementById('filePreviewBar').classList.remove('show');}catch(error){hideTyping();addMessage('All models are currently unavailable. Please try again.','error');}finally{isProcessing=false;document.getElementById('sendButton').disabled=false;document.getElementById('userInput').focus();}}
+        async function sendMessage(){
+            const message=document.getElementById('userInput').value.trim();
+            if(!message||isProcessing)return;
+            document.getElementById('userInput').value='';
+            isProcessing=true;document.getElementById('sendButton').disabled=true;
 
-        async function init(){const hasSession=await checkSession();if(!hasSession){document.getElementById('authScreen').style.display='flex';document.getElementById('appScreen').style.display='none';showLogin();}document.getElementById('userInput')?.focus();}
+            if(selectedFiles.length>0&&selectedFiles[0].type.startsWith('image/')){
+                const reader=new FileReader();
+                reader.onload=(e)=>{
+                    const div=document.createElement('div');div.className='message user-message';
+                    div.innerHTML=`<img src="${e.target.result}" class="uploaded-image">${message?'<br>'+escapeHtml(message):''}<div class="message-time">${getFormattedTime()}</div>`;
+                    document.getElementById('chatMessages').appendChild(div);
+                    document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight;
+                };
+                reader.readAsDataURL(selectedFiles[0]);
+                await new Promise(r=>setTimeout(r,100));
+            }else{addMessage(message,'user');}
+
+            conversationHistory.push({role:'user',content:message});
+            showTyping();
+
+            try{
+                let result;
+                const modelsToTry=[...new Set([MODEL_NAME,FALLBACK_MODEL,'gemma3:4b'])];
+                for(const model of modelsToTry){
+                    try{
+                        const body={model,messages:conversationHistory,userId:currentUser?.id||null,conversationId:currentConversationId};
+                        if(imageMode&&selectedFiles.length>0){
+                            const file=selectedFiles[0];
+                            const base64=await new Promise((resolve)=>{const reader=new FileReader();reader.onload=(e)=>resolve(e.target.result.split(',')[1]);reader.readAsDataURL(file);});
+                            body.messages[body.messages.length-1].images=[base64];
+                        }
+                        const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+getToken()},body:JSON.stringify(body)});
+                        if(response.ok){result=await response.json();if(model!==MODEL_NAME){result.message.content=`Using ${model} (fallback):\n\n${result.message.content}`;}break;}
+                    }catch(e){continue;}
+                }
+                hideTyping();
+                if(!result)throw new Error('All models down');
+                const botReply=result.message?.content||"Sorry, couldn't respond.";
+                addMessage(botReply,'bot');
+                conversationHistory.push({role:'assistant',content:botReply});
+                if(result.conversationId&&!currentConversationId){currentConversationId=result.conversationId;loadConversations();}
+                selectedFiles=[];document.getElementById('filePreview').innerHTML='';document.getElementById('filePreviewBar').classList.remove('show');
+            }catch(error){hideTyping();addMessage('All models are currently unavailable. Please try again.','error');}
+            finally{isProcessing=false;document.getElementById('sendButton').disabled=false;document.getElementById('userInput').focus();}
+        }
+
+        async function init(){
+            const hasSession=await checkSession();
+            if(!hasSession){document.getElementById('authScreen').style.display='flex';document.getElementById('appScreen').style.display='none';showLogin();}
+            document.getElementById('userInput')?.focus();
+        }
         init();
     </script>
 </body>
