@@ -25,7 +25,6 @@
             --accent-hover: #4338ca;
             --accent-gradient: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
             --danger: #ef4444;
-            --danger-hover: #dc2626;
             --success: #10b981;
             --radius-sm: 8px;
             --radius-md: 12px;
@@ -37,49 +36,34 @@
             --shadow-lg: 0 20px 60px rgba(0,0,0,0.5);
             --transition: all 0.2s ease;
         }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-primary);
-            height: 100vh;
-            overflow: hidden;
-            color: var(--text-primary);
-            font-size: 15px;
-            line-height: 1.6;
+            background: var(--bg-primary); height: 100vh; overflow: hidden;
+            color: var(--text-primary); font-size: 15px; line-height: 1.6;
         }
-
         .auth-container { height: 100vh; display: flex; justify-content: center; align-items: center; }
         .auth-box {
-            background: var(--bg-card);
-            padding: 48px 44px;
-            border-radius: var(--radius-xl);
-            text-align: center;
-            max-width: 440px;
-            width: 92%;
-            box-shadow: var(--shadow-lg);
-            animation: slideUp 0.4s ease-out;
+            background: var(--bg-card); padding: 48px 44px; border-radius: var(--radius-xl);
+            text-align: center; max-width: 440px; width: 92%;
+            box-shadow: var(--shadow-lg); animation: slideUp 0.4s ease-out;
         }
         @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        .auth-box h2 { margin-bottom: 4px; font-size: 28px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+        .auth-box h2 { margin-bottom: 4px; font-size: 28px; font-weight: 700; color: var(--text-primary); }
         .auth-box .auth-subtitle { margin-bottom: 28px; color: var(--text-secondary); font-size: 14px; }
         .auth-input {
             width: 100%; padding: 14px 16px; margin-bottom: 12px;
             border: 1.5px solid var(--border); border-radius: var(--radius-md);
-            font-size: 15px; outline: none; background: var(--bg-input);
-            transition: var(--transition); color: var(--text-primary);
+            font-size: 15px; outline: none; background: var(--bg-input); transition: var(--transition);
         }
         .auth-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); background: white; }
-        .auth-input::placeholder { color: var(--text-muted); }
         .auth-btn {
-            width: 100%; padding: 14px;
-            background: var(--accent-gradient);
+            width: 100%; padding: 14px; background: var(--accent-gradient);
             color: white; border: none; border-radius: var(--radius-md);
-            font-size: 15px; font-weight: 600; cursor: pointer;
-            margin: 8px 0 14px; transition: var(--transition); letter-spacing: 0.2px;
+            font-size: 15px; font-weight: 600; cursor: pointer; margin: 8px 0 14px; transition: var(--transition);
         }
         .auth-btn:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(79,70,229,0.4); }
-        .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .auth-link { color: var(--accent); cursor: pointer; font-size: 14px; background: none; border: none; font-weight: 500; }
         .auth-link:hover { color: var(--accent-hover); text-decoration: underline; }
         .auth-error {
@@ -98,22 +82,18 @@
         }
         .google-btn:hover { border-color: var(--accent); box-shadow: var(--shadow-md); }
         .google-btn img { width: 18px; height: 18px; }
-
         .app-layout { display: flex; height: 100vh; }
         .sidebar {
             width: 280px; background: var(--bg-secondary); color: var(--text-light);
-            display: flex; flex-direction: column;
-            border-right: 1px solid rgba(255,255,255,0.06);
+            display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.06);
         }
         .sidebar-header { padding: 22px 18px; border-bottom: 1px solid rgba(255,255,255,0.06); }
-        .sidebar-header h2 { font-size: 18px; margin-bottom: 14px; font-weight: 600; color: white; letter-spacing: -0.3px; }
+        .sidebar-header h2 { font-size: 18px; margin-bottom: 14px; font-weight: 600; color: white; }
         .new-chat-btn {
-            width: 100%; padding: 11px;
-            background: var(--accent-gradient);
+            width: 100%; padding: 11px; background: var(--accent-gradient);
             color: white; border: none; border-radius: var(--radius-md);
-            cursor: pointer; font-size: 14px; font-weight: 500; transition: var(--transition);
+            cursor: pointer; font-size: 14px; font-weight: 500;
         }
-        .new-chat-btn:hover { opacity: 0.9; }
         .conversations-list { flex: 1; overflow-y: auto; padding: 10px 8px; }
         .conversation-item {
             padding: 11px 14px; margin-bottom: 4px; border-radius: var(--radius-md);
@@ -127,7 +107,7 @@
         .delete-chat-btn {
             background: transparent; color: rgba(255,255,255,0.3);
             border: none; padding: 4px 7px; border-radius: 6px;
-            cursor: pointer; font-size: 12px; flex-shrink: 0; transition: var(--transition);
+            cursor: pointer; font-size: 12px; flex-shrink: 0;
         }
         .delete-chat-btn:hover { background: rgba(239,68,68,0.2); color: #f87171; }
         .sidebar-footer { padding: 16px 14px; border-top: 1px solid rgba(255,255,255,0.06); }
@@ -140,17 +120,16 @@
         .sign-out-btn {
             width: 100%; padding: 9px; background: rgba(255,255,255,0.05);
             color: var(--text-muted); border: none; border-radius: var(--radius-sm);
-            cursor: pointer; font-size: 12px; font-weight: 500; transition: var(--transition);
+            cursor: pointer; font-size: 12px; font-weight: 500;
         }
         .sign-out-btn:hover { background: rgba(255,255,255,0.1); color: white; }
-
         .chat-container { flex: 1; display: flex; flex-direction: column; background: var(--bg-card); }
         .chat-header {
             background: var(--bg-secondary); color: white;
             padding: 16px 24px; display: flex; justify-content: space-between;
             align-items: center; border-bottom: 1px solid var(--border);
         }
-        .chat-header h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+        .chat-header h1 { font-size: 20px; font-weight: 700; }
         .header-controls { display: flex; align-items: center; gap: 10px; }
         .image-mode-toggle {
             padding: 8px 16px; border-radius: var(--radius-full);
@@ -168,7 +147,6 @@
         }
         .model-selector select option { background: var(--bg-secondary); color: white; }
         .model-selector select:disabled { opacity: 0.4; cursor: not-allowed; }
-        
         .chat-messages {
             flex: 1; overflow-y: auto; padding: 28px 24px;
             background: #fafbfc; display: flex; flex-direction: column; gap: 20px;
@@ -179,132 +157,45 @@
             animation: fadeIn 0.25s ease; font-size: 15px;
         }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .user-message {
-            background: var(--accent-gradient); color: white;
-            align-self: flex-end; border-bottom-right-radius: 6px;
-        }
-        .bot-message {
-            background: white; color: var(--text-primary); align-self: flex-start;
-            border-bottom-left-radius: 6px; box-shadow: var(--shadow-sm);
-            border: 1px solid #f1f5f9;
-        }
-        .error-message {
-            background: #fef2f2; color: var(--danger); border: 1px solid #fecaca;
-            align-self: center; max-width: 85%; text-align: center; font-size: 14px;
-        }
-        .typing-indicator {
-            display: flex; gap: 5px; padding: 14px 20px;
-            background: white; border-radius: var(--radius-lg); align-self: flex-start;
-            box-shadow: var(--shadow-sm); border: 1px solid #f1f5f9;
-        }
-        .typing-dot {
-            width: 8px; height: 8px; background: var(--text-muted);
-            border-radius: 50%; animation: typing 1.4s infinite;
-        }
+        .user-message { background: var(--accent-gradient); color: white; align-self: flex-end; border-bottom-right-radius: 6px; }
+        .bot-message { background: white; color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 6px; box-shadow: var(--shadow-sm); border: 1px solid #f1f5f9; }
+        .error-message { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; align-self: center; max-width: 85%; text-align: center; font-size: 14px; }
+        .typing-indicator { display: flex; gap: 5px; padding: 14px 20px; background: white; border-radius: var(--radius-lg); align-self: flex-start; box-shadow: var(--shadow-sm); border: 1px solid #f1f5f9; }
+        .typing-dot { width: 8px; height: 8px; background: var(--text-muted); border-radius: 50%; animation: typing 1.4s infinite; }
         .typing-dot:nth-child(2) { animation-delay: 0.2s; }
         .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes typing {
-            0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
-            30% { transform: translateY(-10px); opacity: 1; }
-        }
-        
-        .message img.uploaded-image {
-            max-width: 220px; border-radius: var(--radius-md); margin-bottom: 8px; cursor: pointer;
-        }
-        
-        .file-preview-bar {
-            padding: 10px 20px; background: #fff; border-top: 1px solid var(--border); display: none;
-        }
+        @keyframes typing { 0%, 60%, 100% { transform: translateY(0); opacity: 0.3; } 30% { transform: translateY(-10px); opacity: 1; } }
+        .message img.uploaded-image { max-width: 220px; border-radius: var(--radius-md); margin-bottom: 8px; cursor: pointer; }
+        .file-preview-bar { padding: 10px 20px; background: #fff; border-top: 1px solid var(--border); display: none; }
         .file-preview-bar.show { display: block; }
-        .file-preview-item {
-            display: inline-flex; align-items: center; gap: 8px;
-            background: var(--bg-hover); padding: 6px 12px;
-            border-radius: var(--radius-sm); font-size: 13px; margin-right: 8px;
-        }
+        .file-preview-item { display: inline-flex; align-items: center; gap: 8px; background: var(--bg-hover); padding: 6px 12px; border-radius: var(--radius-sm); font-size: 13px; margin-right: 8px; }
         .file-preview-item img { width: 30px; height: 30px; object-fit: cover; border-radius: 4px; }
-        .remove-file-btn {
-            background: var(--danger); color: white; border: none;
-            width: 18px; height: 18px; border-radius: 50%;
-            cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center;
-        }
-        
+        .remove-file-btn { background: var(--danger); color: white; border: none; width: 18px; height: 18px; border-radius: 50%; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; }
         .chat-input-area { padding: 18px 24px; background: white; border-top: 1px solid var(--border); }
         .chat-input { display: flex; gap: 10px; align-items: center; }
-        .chat-input input[type="text"] {
-            flex: 1; padding: 13px 20px; border: 1.5px solid var(--border);
-            border-radius: var(--radius-full); font-size: 15px; outline: none;
-            transition: var(--transition); background: var(--bg-input); color: var(--text-primary);
-        }
+        .chat-input input[type="text"] { flex: 1; padding: 13px 20px; border: 1.5px solid var(--border); border-radius: var(--radius-full); font-size: 15px; outline: none; transition: var(--transition); background: var(--bg-input); color: var(--text-primary); }
         .chat-input input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,70,229,0.08); }
-        .upload-btn {
-            padding: 13px 16px; background: var(--bg-hover); border: 1.5px solid var(--border);
-            border-radius: var(--radius-full); cursor: pointer; font-size: 18px;
-            transition: var(--transition); color: var(--text-secondary);
-        }
+        .upload-btn { padding: 13px 16px; background: var(--bg-hover); border: 1.5px solid var(--border); border-radius: var(--radius-full); cursor: pointer; font-size: 18px; transition: var(--transition); color: var(--text-secondary); }
         .upload-btn:hover { background: #e2e8f0; border-color: var(--accent); color: var(--accent); }
         .upload-btn.active-upload { background: var(--success); border-color: var(--success); color: white; }
-        .chat-input .send-btn {
-            padding: 13px 26px; background: var(--accent-gradient);
-            color: white; border: none; border-radius: var(--radius-full);
-            font-size: 15px; font-weight: 600; cursor: pointer; transition: var(--transition);
-            letter-spacing: 0.3px;
-        }
+        .chat-input .send-btn { padding: 13px 26px; background: var(--accent-gradient); color: white; border: none; border-radius: var(--radius-full); font-size: 15px; font-weight: 600; cursor: pointer; transition: var(--transition); }
         .chat-input .send-btn:hover:not(:disabled) { opacity: 0.9; box-shadow: 0 4px 14px rgba(79,70,229,0.4); }
         .chat-input .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        
-        .message-time { font-size: 11px; margin-top: 8px; opacity: 0.55; font-weight: 400; letter-spacing: 0.2px; }
+        .message-time { font-size: 11px; margin-top: 8px; opacity: 0.55; font-weight: 400; }
         .user-message .message-time { text-align: right; opacity: 0.7; }
-
-        .message pre {
-            background: #1a1b26;
-            border-radius: var(--radius-md);
-            padding: 0;
-            margin: 16px 0;
-            overflow-x: auto;
-            border: 1px solid #2a2b3d;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-        .message pre code {
-            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
-            font-size: 13.5px; line-height: 1.7;
-            padding: 18px 20px; display: block;
-            color: #c9d1d9; white-space: pre-wrap; word-break: break-word;
-        }
-        .code-header {
-            display: flex; justify-content: space-between; align-items: center;
-            background: #161723; padding: 10px 18px;
-            border-radius: var(--radius-md) var(--radius-md) 0 0;
-            font-size: 11px; color: #8b949e; font-weight: 500;
-            letter-spacing: 0.5px; text-transform: uppercase;
-        }
-        .copy-btn {
-            background: rgba(255,255,255,0.06); color: #8b949e;
-            border: 1px solid rgba(255,255,255,0.1); padding: 5px 12px;
-            border-radius: 6px; cursor: pointer; font-size: 11px;
-            transition: var(--transition); font-weight: 500; letter-spacing: 0.3px;
-        }
+        .message pre { background: #1a1b26; border-radius: var(--radius-md); padding: 0; margin: 16px 0; overflow-x: auto; border: 1px solid #2a2b3d; white-space: pre-wrap; word-break: break-word; }
+        .message pre code { font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; font-size: 13.5px; line-height: 1.7; padding: 18px 20px; display: block; color: #c9d1d9; white-space: pre-wrap; word-break: break-word; }
+        .code-header { display: flex; justify-content: space-between; align-items: center; background: #161723; padding: 10px 18px; border-radius: var(--radius-md) var(--radius-md) 0 0; font-size: 11px; color: #8b949e; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; }
+        .copy-btn { background: rgba(255,255,255,0.06); color: #8b949e; border: 1px solid rgba(255,255,255,0.1); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; transition: var(--transition); font-weight: 500; }
         .copy-btn:hover { background: rgba(255,255,255,0.12); color: white; border-color: rgba(255,255,255,0.2); }
-        
-        .message code:not(pre code) {
-            background: #f1f5f9; padding: 2px 7px; border-radius: 5px;
-            font-family: 'JetBrains Mono', 'Fira Code', monospace;
-            font-size: 0.88em; color: #d63384; font-weight: 500;
-        }
-
+        .message code:not(pre code) { background: #f1f5f9; padding: 2px 7px; border-radius: 5px; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.88em; color: #d63384; font-weight: 500; }
         .chat-messages::-webkit-scrollbar { width: 5px; }
         .chat-messages::-webkit-scrollbar-track { background: transparent; }
         .chat-messages::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .chat-messages::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-        @media (max-width: 768px) {
-            .sidebar { display: none; }
-            .message { max-width: 88%; }
-        }
+        @media (max-width: 768px) { .sidebar { display: none; } .message { max-width: 88%; } }
     </style>
 </head>
 <body>
-    <!-- Auth Screen -->
     <div id="authScreen" class="auth-container">
         <div class="auth-box" id="authBox">
             <div id="loginForm">
@@ -337,7 +228,6 @@
         </div>
     </div>
 
-    <!-- App Screen -->
     <div id="appScreen" class="app-layout" style="display:none;">
         <div class="sidebar">
             <div class="sidebar-header">
@@ -363,11 +253,11 @@
                     <button id="imageModeBtn" class="image-mode-toggle" onclick="toggleImageMode()">Image Mode: OFF</button>
                     <div class="model-selector">
                         <select id="modelSelect" onchange="onModelChange()">
-                            <option value="gemini-3-flash-preview" selected>Gemini 3 Flash</option>
-                            <option value="gemma3:4b">Gemma 3 (4B)</option>
-                            <option value="gemma3:12b">Gemma 3 (12B)</option>
+                            <option value="siddiquinashra/llama3.2:latest" selected>Llama 3.2 (Custom)</option>
                             <option value="deepseek-v3.2">DeepSeek V3.2</option>
                             <option value="deepseek-v4-flash">DeepSeek V4 Flash</option>
+                            <option value="gemma3:4b">Gemma 3 (4B)</option>
+                            <option value="gemma3:12b">Gemma 3 (12B)</option>
                             <option value="qwen3-coder-next">Qwen 3 Coder</option>
                             <option value="kimi-k2-thinking">Kimi K2 Thinking</option>
                             <option value="mistral-large-3:675b">Mistral Large 3</option>
@@ -403,16 +293,16 @@
         const API_URL = '/api/chat';
         const AUTH_URL = '/api/auth';
         const GOOGLE_CLIENT_ID = '357614574670-2b6bs52fpfibnjc7501hph59b3tnmkl9.apps.googleusercontent.com';
-        const FALLBACK_MODEL = 'gemini-3-flash-preview';
-        const IMAGE_MODEL = 'gemini-3-flash-preview';
-        let MODEL_NAME = 'gemini-3-flash-preview';
+        const FALLBACK_MODEL = 'deepseek-v3.2';
+        const IMAGE_MODEL = 'gemma3:12b';
+        let MODEL_NAME = 'siddiquinashra/llama3.2:latest';
         let currentUser = null;
         let currentConversationId = null;
         let conversationHistory = [];
         let isProcessing = false;
         let selectedFiles = [];
         let imageMode = false;
-        let previousModel = 'gemini-3-flash-preview';
+        let previousModel = 'siddiquinashra/llama3.2:latest';
         let gisInitialized = false;
 
         function toggleImageMode() {
@@ -458,12 +348,9 @@
             if(!selectedFiles.length) { bar.classList.remove('show'); return; }
             bar.classList.add('show');
             selectedFiles.forEach(file => {
-                const item = document.createElement('div');
-                item.className = 'file-preview-item';
+                const item = document.createElement('div'); item.className = 'file-preview-item';
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    item.innerHTML = `<img src="${e.target.result}" alt="Preview"><span>${file.name}</span><button class="remove-file-btn" onclick="removeFile()">&times;</button>`;
-                };
+                reader.onload = (e) => { item.innerHTML = `<img src="${e.target.result}" alt="Preview"><span>${file.name}</span><button class="remove-file-btn" onclick="removeFile()">&times;</button>`; };
                 reader.readAsDataURL(file);
                 preview.appendChild(item);
             });
@@ -478,197 +365,25 @@
         function setLoading(btnId, loading) { const btn=document.getElementById(btnId); if(!btn) return; btn.disabled=loading; btn.textContent=loading?'Please wait...':(btnId==='loginBtn'?'Sign In':'Create Account'); }
         function getToken() { const saved=localStorage.getItem('ava_session'); if(!saved) return null; try{return JSON.parse(saved).access_token;}catch(e){return null;} }
 
-        function ensureGoogleReady(callback){
-            if(typeof google!=='undefined'&&google.accounts){callback();}
-            else{const check=setInterval(()=>{if(typeof google!=='undefined'&&google.accounts){clearInterval(check);callback();}},200);setTimeout(()=>clearInterval(check),5000);}
-        }
-
-        function handleGoogleSignIn(){
-            ensureGoogleReady(()=>{
-                if(!gisInitialized){
-                    google.accounts.id.initialize({
-                        client_id:GOOGLE_CLIENT_ID,
-                        callback:handleGoogleResponse,
-                        auto_select:false,
-                        cancel_on_tap_outside:true,
-                        use_fedcm_for_prompt:true
-                    });
-                    gisInitialized=true;
-                }
-                google.accounts.id.prompt((notification)=>{
-                    if(notification.isNotDisplayed()||notification.isSkippedMoment()){
-                        const client=google.accounts.oauth2.initCodeClient({
-                            client_id:GOOGLE_CLIENT_ID,
-                            scope:'email profile',
-                            ux_mode:'popup',
-                            callback:(response)=>{
-                                if(response.code){handleGoogleAuthCode(response.code);}
-                                else{showError('login','Sign-in cancelled.');}
-                            }
-                        });
-                        client.requestCode();
-                    }
-                });
-            });
-        }
-
-        async function handleGoogleResponse(response){
-            try{
-                const res=await fetch(AUTH_URL+'?action=google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:response.credential})});
-                const data=await res.json();
-                if(data.user){currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}
-                else{showError('login',data.error||'Google sign-in failed');}
-            }catch(err){showError('login','Network error.');}
-        }
-
-        async function handleGoogleAuthCode(code){
-            try{
-                const res=await fetch(AUTH_URL+'?action=google-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
-                const data=await res.json();
-                if(data.user){currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}
-                else{showError('login',data.error||'Google sign-in failed');}
-            }catch(err){showError('login','Network error.');}
-        }
-
-        async function handleLogin(){
-            const email=document.getElementById('loginEmail').value.trim();
-            const password=document.getElementById('loginPassword').value;
-            if(!email||!password){showError('login','Please fill in all fields');return;}
-            setLoading('loginBtn',true);clearErrors();
-            try{
-                const response=await fetch(AUTH_URL+'?action=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
-                const data=await response.json();
-                if(!response.ok)throw new Error(data.error||'Invalid email or password');
-                currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();
-            }catch(error){showError('login',error.message);}
-            finally{setLoading('loginBtn',false);}
-        }
-
-        async function handleSignup(){
-            const name=document.getElementById('signupName').value.trim();
-            const email=document.getElementById('signupEmail').value.trim();
-            const password=document.getElementById('signupPassword').value;
-            if(!name||!email||!password){showError('signup','Please fill in all fields');return;}
-            if(password.length<8){showError('signup','Password must be at least 8 characters');return;}
-            setLoading('signupBtn',true);clearErrors();
-            try{
-                const response=await fetch(AUTH_URL+'?action=signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password})});
-                const data=await response.json();
-                if(!response.ok)throw new Error(data.error||'Signup failed');
-                currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();
-            }catch(error){showError('signup',error.message);}
-            finally{setLoading('signupBtn',false);}
-        }
-
-        async function handleSignOut(){
-            const token=getToken();
-            if(token){try{await fetch(AUTH_URL+'?action=logout',{method:'POST',headers:{'Authorization':`Bearer ${token}`}});}catch(e){}}
-            currentUser=null;currentConversationId=null;conversationHistory=[];
-            localStorage.removeItem('ava_session');
-            gisInitialized=false;
-            document.getElementById('authScreen').style.display='flex';
-            document.getElementById('appScreen').style.display='none';
-            document.getElementById('loginEmail').value='';document.getElementById('loginPassword').value='';
-            showLogin();
-        }
-
-        async function checkSession(){
-            const saved=localStorage.getItem('ava_session');
-            if(!saved)return false;
-            try{
-                const session=JSON.parse(saved);
-                const response=await fetch(AUTH_URL+'?action=verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({access_token:session.access_token})});
-                const data=await response.json();
-                if(data.user){currentUser=data.user;showApp();return true;}
-            }catch(e){localStorage.removeItem('ava_session');}
-            return false;
-        }
-
-        function showApp(){
-            document.getElementById('authScreen').style.display='none';
-            document.getElementById('appScreen').style.display='flex';
-            const name=getUserName();
-            document.getElementById('userName').textContent=name;
-            document.getElementById('userAvatar').textContent=name.charAt(0).toUpperCase();
-            document.getElementById('chatMessages').innerHTML=`<div class="message bot-message">Welcome back, ${escapeHtml(name)}. How can I help you today?<div class="message-time">${getFormattedTime()}</div></div>`;
-            conversationHistory=[];currentConversationId=null;
-            loadConversations();
-        }
-
-        async function loadConversations(){
-            if(!currentUser)return;
-            try{
-                const response=await fetch(API_URL,{method:'GET',headers:{'x-user-id':currentUser.id,'Authorization':'Bearer '+getToken()}});
-                const data=await response.json();
-                const list=document.getElementById('conversationsList');
-                if(data.conversations&&data.conversations.length>0){
-                    list.innerHTML=data.conversations.map(conv=>`<div class="conversation-item ${conv.id===currentConversationId?'active':''}"><span class="conversation-title" onclick="loadConversation('${conv.id}')">${escapeHtml(conv.title||'Untitled')}</span><button class="delete-chat-btn" onclick="deleteConversation(event,'${conv.id}')" title="Delete">x</button></div>`).join('');
-                }else{
-                    list.innerHTML='<p style="color:var(--text-muted);text-align:center;margin-top:24px;font-size:13px;">No conversations yet</p>';
-                }
-            }catch(e){console.error(e);}
-        }
-
-        async function deleteConversation(event,convId){
-            event.stopPropagation();
-            if(!confirm('Delete this conversation? This cannot be undone.'))return;
-            try{
-                const response=await fetch(API_URL+'?action=delete',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+getToken(),'x-user-id':currentUser.id},body:JSON.stringify({conversationId:convId})});
-                if(response.ok){if(currentConversationId===convId)newChat();loadConversations();}
-            }catch(e){console.error(e);}
-        }
-
-        async function loadConversation(convId){
-            if(!currentUser)return;
-            try{
-                const response=await fetch(API_URL,{method:'GET',headers:{'x-user-id':currentUser.id,'x-conversation-id':convId,'Authorization':'Bearer '+getToken()}});
-                const data=await response.json();
-                currentConversationId=convId;
-                const chatMessages=document.getElementById('chatMessages');
-                chatMessages.innerHTML='';conversationHistory=[];
-                if(data.messages){data.messages.forEach(msg=>{addMessage(msg.content,msg.role==='user'?'user':'bot',new Date(msg.created_at));conversationHistory.push({role:msg.role,content:msg.content});});}
-                loadConversations();chatMessages.scrollTop=chatMessages.scrollHeight;
-            }catch(e){console.error(e);}
-        }
-
-        function newChat(){
-            currentConversationId=null;conversationHistory=[];
-            document.getElementById('chatMessages').innerHTML=`<div class="message bot-message">New conversation started. What can I help with?<div class="message-time">${getFormattedTime()}</div></div>`;
-            loadConversations();
-        }
-
+        function ensureGoogleReady(callback){if(typeof google!=='undefined'&&google.accounts){callback();}else{const check=setInterval(()=>{if(typeof google!=='undefined'&&google.accounts){clearInterval(check);callback();}},200);setTimeout(()=>clearInterval(check),5000);}}
+        function handleGoogleSignIn(){ensureGoogleReady(()=>{if(!gisInitialized){google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:handleGoogleResponse,auto_select:false,cancel_on_tap_outside:true,use_fedcm_for_prompt:true});gisInitialized=true;}google.accounts.id.prompt((notification)=>{if(notification.isNotDisplayed()||notification.isSkippedMoment()){const client=google.accounts.oauth2.initCodeClient({client_id:GOOGLE_CLIENT_ID,scope:'email profile',ux_mode:'popup',callback:(response)=>{if(response.code){handleGoogleAuthCode(response.code);}else{showError('login','Sign-in cancelled.');}}});client.requestCode();}});});}
+        async function handleGoogleResponse(response){try{const res=await fetch(AUTH_URL+'?action=google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:response.credential})});const data=await res.json();if(data.user){currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}else{showError('login',data.error||'Google sign-in failed');}}catch(err){showError('login','Network error.');}}
+        async function handleGoogleAuthCode(code){try{const res=await fetch(AUTH_URL+'?action=google-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});const data=await res.json();if(data.user){currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}else{showError('login',data.error||'Google sign-in failed');}}catch(err){showError('login','Network error.');}}
+        async function handleLogin(){const email=document.getElementById('loginEmail').value.trim();const password=document.getElementById('loginPassword').value;if(!email||!password){showError('login','Please fill in all fields');return;}setLoading('loginBtn',true);clearErrors();try{const response=await fetch(AUTH_URL+'?action=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});const data=await response.json();if(!response.ok)throw new Error(data.error||'Invalid email or password');currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}catch(error){showError('login',error.message);}finally{setLoading('loginBtn',false);}}
+        async function handleSignup(){const name=document.getElementById('signupName').value.trim();const email=document.getElementById('signupEmail').value.trim();const password=document.getElementById('signupPassword').value;if(!name||!email||!password){showError('signup','Please fill in all fields');return;}if(password.length<8){showError('signup','Password must be at least 8 characters');return;}setLoading('signupBtn',true);clearErrors();try{const response=await fetch(AUTH_URL+'?action=signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password})});const data=await response.json();if(!response.ok)throw new Error(data.error||'Signup failed');currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}catch(error){showError('signup',error.message);}finally{setLoading('signupBtn',false);}}
+        async function handleSignOut(){const token=getToken();if(token){try{await fetch(AUTH_URL+'?action=logout',{method:'POST',headers:{'Authorization':`Bearer ${token}`}});}catch(e){}}currentUser=null;currentConversationId=null;conversationHistory=[];localStorage.removeItem('ava_session');gisInitialized=false;document.getElementById('authScreen').style.display='flex';document.getElementById('appScreen').style.display='none';document.getElementById('loginEmail').value='';document.getElementById('loginPassword').value='';showLogin();}
+        async function checkSession(){const saved=localStorage.getItem('ava_session');if(!saved)return false;try{const session=JSON.parse(saved);const response=await fetch(AUTH_URL+'?action=verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({access_token:session.access_token})});const data=await response.json();if(data.user){currentUser=data.user;showApp();return true;}}catch(e){localStorage.removeItem('ava_session');}return false;}
+        function showApp(){document.getElementById('authScreen').style.display='none';document.getElementById('appScreen').style.display='flex';const name=getUserName();document.getElementById('userName').textContent=name;document.getElementById('userAvatar').textContent=name.charAt(0).toUpperCase();document.getElementById('chatMessages').innerHTML=`<div class="message bot-message">Welcome back, ${escapeHtml(name)}. How can I help you today?<div class="message-time">${getFormattedTime()}</div></div>`;conversationHistory=[];currentConversationId=null;loadConversations();}
+        async function loadConversations(){if(!currentUser)return;try{const response=await fetch(API_URL,{method:'GET',headers:{'x-user-id':currentUser.id,'Authorization':'Bearer '+getToken()}});const data=await response.json();const list=document.getElementById('conversationsList');if(data.conversations&&data.conversations.length>0){list.innerHTML=data.conversations.map(conv=>`<div class="conversation-item ${conv.id===currentConversationId?'active':''}"><span class="conversation-title" onclick="loadConversation('${conv.id}')">${escapeHtml(conv.title||'Untitled')}</span><button class="delete-chat-btn" onclick="deleteConversation(event,'${conv.id}')" title="Delete">x</button></div>`).join('');}else{list.innerHTML='<p style="color:var(--text-muted);text-align:center;margin-top:24px;font-size:13px;">No conversations yet</p>';}}catch(e){console.error(e);}}
+        async function deleteConversation(event,convId){event.stopPropagation();if(!confirm('Delete this conversation? This cannot be undone.'))return;try{const response=await fetch(API_URL+'?action=delete',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+getToken(),'x-user-id':currentUser.id},body:JSON.stringify({conversationId:convId})});if(response.ok){if(currentConversationId===convId)newChat();loadConversations();}}catch(e){console.error(e);}}
+        async function loadConversation(convId){if(!currentUser)return;try{const response=await fetch(API_URL,{method:'GET',headers:{'x-user-id':currentUser.id,'x-conversation-id':convId,'Authorization':'Bearer '+getToken()}});const data=await response.json();currentConversationId=convId;const chatMessages=document.getElementById('chatMessages');chatMessages.innerHTML='';conversationHistory=[];if(data.messages){data.messages.forEach(msg=>{addMessage(msg.content,msg.role==='user'?'user':'bot',new Date(msg.created_at));conversationHistory.push({role:msg.role,content:msg.content});});}loadConversations();chatMessages.scrollTop=chatMessages.scrollHeight;}catch(e){console.error(e);}}
+        function newChat(){currentConversationId=null;conversationHistory=[];document.getElementById('chatMessages').innerHTML=`<div class="message bot-message">New conversation started. What can I help with?<div class="message-time">${getFormattedTime()}</div></div>`;loadConversations();}
         function getFormattedTime(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
         function escapeHtml(text){if(!text)return'';const div=document.createElement('div');div.textContent=text;return div.innerHTML;}
 
-        function addCopyButtons(){
-            document.querySelectorAll('.message pre').forEach(pre=>{
-                if(pre.querySelector('.code-header'))return;
-                const header=document.createElement('div');header.className='code-header';
-                const lang=pre.querySelector('code')?.className?.replace('language-','')||'code';
-                header.innerHTML=`<span>${lang}</span>`;
-                const copyBtn=document.createElement('button');copyBtn.className='copy-btn';copyBtn.textContent='Copy';
-                copyBtn.onclick=()=>{const code=pre.querySelector('code').textContent;navigator.clipboard.writeText(code).then(()=>{copyBtn.textContent='Copied!';setTimeout(()=>copyBtn.textContent='Copy',2000);});};
-                header.appendChild(copyBtn);pre.insertBefore(header,pre.firstChild);
-            });
-        }
-
-        function addMessage(content,type,time=new Date()){
-            const div=document.createElement('div');div.className=`message ${type}-message`;
-            let processed=content.replace(/```(\w+)?\n([\s\S]*?)```/g,(_,lang,code)=>`<pre><code class="language-${lang||'plaintext'}">${escapeHtml(code.trim())}</code></pre>`).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br>');
-            div.innerHTML=processed+`<div class="message-time">${time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>`;
-            document.getElementById('chatMessages').appendChild(div);
-            div.querySelectorAll('pre code').forEach(block=>hljs.highlightElement(block));
-            addCopyButtons();
-            document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight;
-        }
-
-        function showTyping(){
-            const div=document.createElement('div');div.className='typing-indicator';div.id='typingIndicator';
-            div.innerHTML='<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
-            document.getElementById('chatMessages').appendChild(div);
-            document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight;
-        }
-
+        function addCopyButtons(){document.querySelectorAll('.message pre').forEach(pre=>{if(pre.querySelector('.code-header'))return;const header=document.createElement('div');header.className='code-header';const lang=pre.querySelector('code')?.className?.replace('language-','')||'code';header.innerHTML=`<span>${lang}</span>`;const copyBtn=document.createElement('button');copyBtn.className='copy-btn';copyBtn.textContent='Copy';copyBtn.onclick=()=>{const code=pre.querySelector('code').textContent;navigator.clipboard.writeText(code).then(()=>{copyBtn.textContent='Copied!';setTimeout(()=>copyBtn.textContent='Copy',2000);});};header.appendChild(copyBtn);pre.insertBefore(header,pre.firstChild);});}
+        function addMessage(content,type,time=new Date()){const div=document.createElement('div');div.className=`message ${type}-message`;let processed=content.replace(/```(\w+)?\n([\s\S]*?)```/g,(_,lang,code)=>`<pre><code class="language-${lang||'plaintext'}">${escapeHtml(code.trim())}</code></pre>`).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br>');div.innerHTML=processed+`<div class="message-time">${time.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>`;document.getElementById('chatMessages').appendChild(div);div.querySelectorAll('pre code').forEach(block=>hljs.highlightElement(block));addCopyButtons();document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight;}
+        function showTyping(){const div=document.createElement('div');div.className='typing-indicator';div.id='typingIndicator';div.innerHTML='<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';document.getElementById('chatMessages').appendChild(div);document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight;}
         function hideTyping(){document.getElementById('typingIndicator')?.remove();}
 
         async function sendMessage(){
@@ -676,53 +391,33 @@
             if(!message||isProcessing)return;
             document.getElementById('userInput').value='';
             isProcessing=true;document.getElementById('sendButton').disabled=true;
-
             if(selectedFiles.length>0&&selectedFiles[0].type.startsWith('image/')){
                 const reader=new FileReader();
-                reader.onload=(e)=>{
-                    const div=document.createElement('div');div.className='message user-message';
-                    div.innerHTML=`<img src="${e.target.result}" class="uploaded-image">${message?'<br>'+escapeHtml(message):''}<div class="message-time">${getFormattedTime()}</div>`;
-                    document.getElementById('chatMessages').appendChild(div);
-                    document.getElementById('chatMessages').scrollTop=document.getElementById('chatMessages').scrollHeight;
-                };
-                reader.readAsDataURL(selectedFiles[0]);
-                await new Promise(r=>setTimeout(r,100));
+                reader.onload=(e)=>{const div=document.createElement('div');div.className='message user-message';div.innerHTML=`<img src="${e.target.result}" class="uploaded-image">${message?'<br>'+escapeHtml(message):''}<div class="message-time">${getFormattedTime()}</div>`;document.getElementById('chatMessages').appendChild(div);};
+                reader.readAsDataURL(selectedFiles[0]);await new Promise(r=>setTimeout(r,100));
             }else{addMessage(message,'user');}
-
-            conversationHistory.push({role:'user',content:message});
-            showTyping();
-
+            conversationHistory.push({role:'user',content:message});showTyping();
             try{
                 let result;
                 const modelsToTry=[...new Set([MODEL_NAME,FALLBACK_MODEL,'gemma3:4b'])];
                 for(const model of modelsToTry){
                     try{
                         const body={model,messages:conversationHistory,userId:currentUser?.id||null,conversationId:currentConversationId};
-                        if(imageMode&&selectedFiles.length>0){
-                            const file=selectedFiles[0];
-                            const base64=await new Promise((resolve)=>{const reader=new FileReader();reader.onload=(e)=>resolve(e.target.result.split(',')[1]);reader.readAsDataURL(file);});
-                            body.messages[body.messages.length-1].images=[base64];
-                        }
+                        if(imageMode&&selectedFiles.length>0){const file=selectedFiles[0];const base64=await new Promise((resolve)=>{const reader=new FileReader();reader.onload=(e)=>resolve(e.target.result.split(',')[1]);reader.readAsDataURL(file);});body.messages[body.messages.length-1].images=[base64];}
                         const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+getToken()},body:JSON.stringify(body)});
-                        if(response.ok){result=await response.json();if(model!==MODEL_NAME){result.message.content=`Using ${model} (fallback):\n\n${result.message.content}`;}break;}
+                        if(response.ok){result=await response.json();break;}
                     }catch(e){continue;}
                 }
-                hideTyping();
-                if(!result)throw new Error('All models down');
-                const botReply=result.message?.content||"Sorry, couldn't respond.";
-                addMessage(botReply,'bot');
-                conversationHistory.push({role:'assistant',content:botReply});
+                hideTyping();if(!result)throw new Error('All models down');
+                addMessage(result.message?.content||"Sorry, couldn't respond.",'bot');
+                conversationHistory.push({role:'assistant',content:result.message?.content});
                 if(result.conversationId&&!currentConversationId){currentConversationId=result.conversationId;loadConversations();}
                 selectedFiles=[];document.getElementById('filePreview').innerHTML='';document.getElementById('filePreviewBar').classList.remove('show');
             }catch(error){hideTyping();addMessage('All models are currently unavailable. Please try again.','error');}
             finally{isProcessing=false;document.getElementById('sendButton').disabled=false;document.getElementById('userInput').focus();}
         }
 
-        async function init(){
-            const hasSession=await checkSession();
-            if(!hasSession){document.getElementById('authScreen').style.display='flex';document.getElementById('appScreen').style.display='none';showLogin();}
-            document.getElementById('userInput')?.focus();
-        }
+        async function init(){const hasSession=await checkSession();if(!hasSession){document.getElementById('authScreen').style.display='flex';document.getElementById('appScreen').style.display='none';showLogin();}document.getElementById('userInput')?.focus();}
         init();
     </script>
 </body>
