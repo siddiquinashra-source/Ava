@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     const url = new URL(req.url, 'http://localhost');
     const action = url.searchParams.get('action') || '';
 
-    // ----- GET: Load history -----
+    // ----- GET: Load conversations or messages -----
     if (req.method === 'GET') {
         const userId = req.headers['x-user-id'];
         const conversationId = req.headers['x-conversation-id'];
@@ -66,7 +66,7 @@ export default async function handler(req, res) {
         }
     }
 
-    // ----- POST: Chat + Save -----
+    // ----- POST: Chat with optional image -----
     if (req.method === 'POST' && action !== 'delete') {
         const { model, messages, userId, conversationId } = req.body;
 
@@ -75,26 +75,44 @@ export default async function handler(req, res) {
         }
 
         try {
+            console.log('Processing chat request. Model:', model);
+            console.log('Messages count:', messages.length);
+            
+            // Check if the last message contains images
+            const lastMessage = messages[messages.length - 1];
+            const hasImages = lastMessage.images && lastMessage.images.length > 0;
+            
+            if (hasImages) {
+                console.log('Image detected in message. Size:', lastMessage.images[0].length, 'characters');
+            }
+
+            // Build the request body for Ollama
+            const ollamaBody = {
+                model: model,
+                messages: messages,
+                stream: false
+            };
+
+            // Call Ollama API
             const response = await fetch('https://api.ollama.com/api/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${OLLAMA_API_KEY}`
                 },
-                body: JSON.stringify({
-                    model: model,
-                    messages: messages,
-                    stream: false
-                })
+                body: JSON.stringify(ollamaBody)
             });
 
             if (!response.ok) {
                 const errText = await response.text();
+                console.error('Ollama API error:', response.status, errText);
                 return res.status(response.status).json({ error: errText });
             }
 
             const data = await response.json();
             const botReply = data.message?.content || data.response;
+            
+            console.log('Response received. Length:', botReply?.length);
 
             let convId = conversationId;
 
@@ -102,7 +120,7 @@ export default async function handler(req, res) {
             if (userId && botReply) {
                 if (!convId) {
                     const lastMsg = messages[messages.length - 1];
-                    const title = lastMsg?.content?.substring(0, 100) || 'New Chat';
+                    const title = (lastMsg.content || 'Image analysis').substring(0, 100);
                     const newConv = await sql`
                         INSERT INTO conversations (user_id, title)
                         VALUES (${userId}, ${title})
@@ -112,14 +130,20 @@ export default async function handler(req, res) {
                 }
 
                 const lastMsg = messages[messages.length - 1];
+                
+                // Save user message (text only - images are too large for DB)
+                const userContent = lastMsg.content || '[Image analysis request]';
                 await sql`
                     INSERT INTO messages (conversation_id, role, content, model)
-                    VALUES (${convId}, 'user', ${lastMsg.content}, ${model})
+                    VALUES (${convId}, 'user', ${userContent}, ${model})
                 `;
+                
+                // Save assistant response
                 await sql`
                     INSERT INTO messages (conversation_id, role, content, model)
                     VALUES (${convId}, 'assistant', ${botReply}, ${model})
                 `;
+                
                 await sql`
                     UPDATE conversations SET updated_at = NOW()
                     WHERE id = ${convId}
@@ -137,6 +161,7 @@ export default async function handler(req, res) {
             });
 
         } catch (error) {
+            console.error('Fatal error:', error);
             return res.status(500).json({ error: error.message });
         }
     }
