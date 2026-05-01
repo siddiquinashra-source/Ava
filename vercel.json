@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/chat.js": {
-      "memory": 256,
+      "memory": 512,
       "maxDuration": 60
     },
     "api/auth.js": {
