@@ -201,6 +201,7 @@
     </div>
 
     <script>
+        // ----- CONFIG -----
         const API_URL = '/api/chat';
         const AUTH_URL = '/api/auth';
         const GOOGLE_CLIENT_ID = '357614574670-2b6bs52fpfibnjc7501hph59b3tnmkl9.apps.googleusercontent.com';
@@ -211,7 +212,37 @@
         let conversationHistory = [];
         let isProcessing = false;
         let selectedFiles = [];
-        let gisInitialized = false;
+
+        // ----- CHECK FOR AUTH DATA FROM GOOGLE REDIRECT -----
+        (function checkAuthRedirect() {
+            const params = new URLSearchParams(window.location.search);
+            const authData = params.get('auth');
+            if (authData) {
+                try {
+                    const data = JSON.parse(decodeURIComponent(authData));
+                    const session = {
+                        access_token: data.token,
+                        user: { id: data.id, name: data.name, email: data.email }
+                    };
+                    localStorage.setItem('ava_session', JSON.stringify(session));
+                    window.history.replaceState({}, document.title, '/');
+                } catch (e) {
+                    console.error('Failed to parse auth data:', e);
+                }
+            }
+        })();
+
+        // ----- GOOGLE SIGN-IN (redirect-based, works on ALL browsers) -----
+        function handleGoogleSignIn() {
+            const client = google.accounts.oauth2.initCodeClient({
+                client_id: GOOGLE_CLIENT_ID,
+                scope: 'email profile',
+                ux_mode: 'redirect',
+                redirect_uri: window.location.origin + '/api/auth/callback',
+                state: 'signin'
+            });
+            client.requestCode();
+        }
 
         function onModelChange() { MODEL_NAME = document.getElementById('modelSelect').value; }
 
@@ -250,13 +281,9 @@
         function setLoading(btnId, loading) { const btn=document.getElementById(btnId); if(!btn) return; btn.disabled=loading; btn.textContent=loading?'Please wait...':(btnId==='loginBtn'?'Sign In':'Create Account'); }
         function getToken() { const saved=localStorage.getItem('ava_session'); if(!saved) return null; try{return JSON.parse(saved).access_token;}catch(e){return null;} }
 
-        function ensureGoogleReady(callback){if(typeof google!=='undefined'&&google.accounts){callback();}else{const check=setInterval(()=>{if(typeof google!=='undefined'&&google.accounts){clearInterval(check);callback();}},200);setTimeout(()=>clearInterval(check),5000);}}
-        function handleGoogleSignIn(){ensureGoogleReady(()=>{if(!gisInitialized){google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:handleGoogleResponse,auto_select:false,cancel_on_tap_outside:true,use_fedcm_for_prompt:true});gisInitialized=true;}google.accounts.id.prompt((notification)=>{if(notification.isDismissedMoment()){const client=google.accounts.oauth2.initCodeClient({client_id:GOOGLE_CLIENT_ID,scope:'email profile',ux_mode:'popup',callback:(response)=>{if(response.code){handleGoogleAuthCode(response.code);}else{showError('login','Sign-in cancelled.');}}});client.requestCode();}});});}
-        async function handleGoogleResponse(response){try{const res=await fetch(AUTH_URL+'?action=google',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:response.credential})});const data=await res.json();if(data.user){currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}else{showError('login',data.error||'Google sign-in failed');}}catch(err){showError('login','Network error.');}}
-        async function handleGoogleAuthCode(code){try{const res=await fetch(AUTH_URL+'?action=google-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});const data=await res.json();if(data.user){currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}else{showError('login',data.error||'Google sign-in failed');}}catch(err){showError('login','Network error.');}}
         async function handleLogin(){const email=document.getElementById('loginEmail').value.trim();const password=document.getElementById('loginPassword').value;if(!email||!password){showError('login','Please fill in all fields');return;}setLoading('loginBtn',true);clearErrors();try{const response=await fetch(AUTH_URL+'?action=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});const data=await response.json();if(!response.ok)throw new Error(data.error||'Invalid email or password');currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}catch(error){showError('login',error.message);}finally{setLoading('loginBtn',false);}}
         async function handleSignup(){const name=document.getElementById('signupName').value.trim();const email=document.getElementById('signupEmail').value.trim();const password=document.getElementById('signupPassword').value;if(!name||!email||!password){showError('signup','Please fill in all fields');return;}if(password.length<8){showError('signup','Password must be at least 8 characters');return;}setLoading('signupBtn',true);clearErrors();try{const response=await fetch(AUTH_URL+'?action=signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password})});const data=await response.json();if(!response.ok)throw new Error(data.error||'Signup failed');currentUser=data.user;localStorage.setItem('ava_session',JSON.stringify(data.session));showApp();}catch(error){showError('signup',error.message);}finally{setLoading('signupBtn',false);}}
-        async function handleSignOut(){const token=getToken();if(token){try{await fetch(AUTH_URL+'?action=logout',{method:'POST',headers:{'Authorization':`Bearer ${token}`}});}catch(e){}}currentUser=null;currentConversationId=null;conversationHistory=[];localStorage.removeItem('ava_session');gisInitialized=false;document.getElementById('authScreen').style.display='flex';document.getElementById('appScreen').style.display='none';document.getElementById('loginEmail').value='';document.getElementById('loginPassword').value='';showLogin();}
+        async function handleSignOut(){const token=getToken();if(token){try{await fetch(AUTH_URL+'?action=logout',{method:'POST',headers:{'Authorization':`Bearer ${token}`}});}catch(e){}}currentUser=null;currentConversationId=null;conversationHistory=[];localStorage.removeItem('ava_session');document.getElementById('authScreen').style.display='flex';document.getElementById('appScreen').style.display='none';document.getElementById('loginEmail').value='';document.getElementById('loginPassword').value='';showLogin();}
         async function checkSession(){const saved=localStorage.getItem('ava_session');if(!saved)return false;try{const session=JSON.parse(saved);const response=await fetch(AUTH_URL+'?action=verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({access_token:session.access_token})});const data=await response.json();if(data.user){currentUser=data.user;showApp();return true;}}catch(e){localStorage.removeItem('ava_session');}return false;}
         function showApp(){document.getElementById('authScreen').style.display='none';document.getElementById('appScreen').style.display='flex';const name=getUserName();document.getElementById('userName').textContent=name;document.getElementById('userAvatar').textContent=name.charAt(0).toUpperCase();document.getElementById('chatMessages').innerHTML=`<div class="message bot-message">Welcome back, ${escapeHtml(name)}. How can I help you today?<div class="message-time">${getFormattedTime()}</div></div>`;conversationHistory=[];currentConversationId=null;loadConversations();}
         async function loadConversations(){if(!currentUser)return;try{const response=await fetch(API_URL,{method:'GET',headers:{'x-user-id':currentUser.id,'Authorization':'Bearer '+getToken()}});const data=await response.json();const list=document.getElementById('conversationsList');if(data.conversations&&data.conversations.length>0){list.innerHTML=data.conversations.map(conv=>`<div class="conversation-item ${conv.id===currentConversationId?'active':''}"><span class="conversation-title" onclick="loadConversation('${conv.id}')">${escapeHtml(conv.title||'Untitled')}</span><button class="delete-chat-btn" onclick="deleteConversation(event,'${conv.id}')" title="Delete">x</button></div>`).join('');}else{list.innerHTML='<p style="color:var(--text-muted);text-align:center;margin-top:24px;font-size:13px;">No conversations yet</p>';}}catch(e){console.error(e);}}
